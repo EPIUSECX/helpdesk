@@ -73,7 +73,7 @@ import {
   FieldValue,
   TicketSymbol,
 } from "@/types";
-import { computed, inject, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, inject, ref } from "vue";
 import TicketField from "../TicketField.vue";
 import AssignTo from "./AssignTo.vue";
 import TicketContact from "./TicketContact.vue";
@@ -167,7 +167,7 @@ function handleFieldUpdate(
   value: FieldValue,
   isCoreFieldUpdated = false
 ) {
-  if (ticket.value.doc[fieldname] === value) return;
+  if (ticket.value.doc[fieldname] == value) return;
   if (isCoreFieldUpdated) {
     const label = getField(fieldname)?.label || fieldname;
     notifyTicketUpdate(label, value as string);
