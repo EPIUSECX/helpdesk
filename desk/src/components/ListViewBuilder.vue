@@ -7,7 +7,7 @@
     <QuickFilters v-if="!isMobileView" class="flex-1" />
     <div class="flex items-start gap-2 justify-end h-full" v-if="!isMobileView">
       <Button
-        label="Save Changes"
+        :label="__('Save Changes')"
         v-if="isViewUpdated && canSaveView"
         @click="handleViewUpdate"
       />
@@ -138,6 +138,7 @@ import { formatTimeShort, getIcon } from "@/utils";
 import { useStorage } from "@vueuse/core";
 
 import { useTicketStatusStore } from "@/stores/ticketStatus";
+import { __ } from "@/translation";
 import {
   call,
   createResource,
@@ -222,15 +223,17 @@ const defaultOptions = reactive({
   },
   selectBannerActions: [
     {
-      label: "Delete",
+      label: __("Delete"),
       icon: "trash-2",
       onClick: (selections: Set<string>) => {
         $dialog({
-          title: "Delete",
-          message: `Are you sure you want to delete ${selections.size} item(s)?`,
+          title: __("Delete"),
+          message: __("Are you sure you want to delete {0} item(s)?", [
+            selections.size,
+          ]),
           actions: [
             {
-              label: "Confirm",
+              label: __("Confirm"),
               variant: "solid",
               onClick({ close }) {
                 handleBulkDelete(close, selections);
@@ -250,7 +253,7 @@ function handleBulkDelete(hide: Function, selections: Set<string>) {
     items: JSON.stringify(Array.from(selections)),
     doctype: props.options.doctype,
   }).then(() => {
-    toast.success("Item(s) deleted successfully");
+    toast.success(__("Item(s) deleted successfully"));
     hide();
     reset();
   });
@@ -272,16 +275,21 @@ const { isMobileView } = useScreenSize();
 
 const defaultEmptyState = {
   icon: "",
-  title: "No Data Found",
+  title: __("No Data Found"),
 };
+
+const pageLengthCount = useStorage(
+  `list_page_length_count+${props.options.doctype}`,
+  options.value.default_page_length
+);
 
 const defaultParams = reactive({
   doctype: options.value.doctype,
   filters: {},
   default_filters: options.value.defaultFilters,
   order_by: "modified desc",
-  page_length: options.value.default_page_length,
-  page_length_count: options.value.default_page_length,
+  page_length: pageLengthCount.value,
+  page_length_count: pageLengthCount.value,
   view: options.value.view,
   columns: [],
   rows: [],
@@ -568,7 +576,8 @@ function reload(reset: boolean = false) {
     defaultParams.filters = options.value.defaultFilters || {};
     defaultParams.order_by = "modified desc";
     defaultParams.page_length = options.value.default_page_length;
-    defaultParams.page_length_count = options.value.default_page_length;
+    pageLengthCount.value = options.value.default_page_length;
+    defaultParams.page_length_count = pageLengthCount.value;
     defaultParams.columns = [];
     defaultParams.rows = [];
     defaultParams.is_default = true;
@@ -577,7 +586,8 @@ function reload(reset: boolean = false) {
 }
 
 function handlePageLength(count: number, loadMore: boolean = false) {
-  defaultParams.page_length_count = count;
+  pageLengthCount.value = count;
+  defaultParams.page_length_count = pageLengthCount.value;
   if (loadMore) {
     defaultParams.page_length += count;
   } else {
@@ -658,7 +668,7 @@ watch(
     defaultParams.view.name = val;
     handleViewChanges();
     if (!val) {
-      headerView.value.label = "List";
+      headerView.value.label = __("List");
       headerView.value.icon = LucideAlignJustify;
     }
   }
@@ -692,7 +702,7 @@ onMounted(async () => {
     if (route.query.view) {
       const currentView = findCurrentView();
       if (!currentView) return;
-      headerView.value.label = currentView.label || "List";
+      headerView.value.label = currentView.label || __("List");
       headerView.value.icon = getIcon(currentView.icon);
     }
     return;

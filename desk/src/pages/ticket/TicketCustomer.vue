@@ -11,7 +11,7 @@
         />
         <Button
           v-if="ticket.data.status !== 'Closed'"
-          label="Close"
+          :label="__('Close')"
           theme="gray"
           variant="solid"
           @click="handleClose()"
@@ -25,6 +25,19 @@
     <div class="flex overflow-hidden h-full w-full">
       <!-- Main Ticket Comm -->
       <section class="flex flex-col flex-1 w-full md:max-w-[calc(100%-382px)]">
+        <div
+          class="px-6 md:px-10 mt-6"
+          v-if="outsideHourSettings.data?.show && !isDismissed"
+        >
+          <Alert
+            v-if="outsideHourSettings.data?.show"
+            :title="outsideHourSettings.data?.msg"
+            theme="yellow"
+            class="text-p-sm [&_.size-4]:relative [&>.size-4]:top-[3.5px] [&_button>:first-child]:top-[2.25px] border border-amber-200"
+            @dismiss="dismissBanner"
+          >
+          </Alert>
+        </div>
         <!-- show for only mobile -->
         <TicketCustomerTemplateFields v-if="isMobileView" />
 
@@ -40,7 +53,7 @@
             v-model:attachments="attachments"
             v-model:content="editorContent"
             v-model:expand="isExpanded"
-            placeholder="Type a message"
+            :placeholder="__('Type a message')"
             autofocus
             @clear="() => (isExpanded = false)"
             :uploadFunction="
@@ -49,7 +62,7 @@
           >
             <template #bottom-right>
               <Button
-                label="Send"
+                :label="__('Send')"
                 theme="gray"
                 variant="solid"
                 :disabled="$refs.editor?.editor.isEmpty || send.loading"
@@ -73,12 +86,20 @@ import TicketCustomerSidebar from "@/components/ticket/TicketCustomerSidebar.vue
 import { setupCustomizations } from "@/composables/formCustomisation";
 import { useActiveViewers } from "@/composables/realtime";
 import { useScreenSize } from "@/composables/screen";
-import { socket } from "@/socket";
+
 import { useConfigStore } from "@/stores/config";
 import { globalStore } from "@/stores/globalStore";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
+import { __ } from "@/translation";
 import { isContentEmpty, isCustomerPortal, uploadFunction } from "@/utils";
-import { Breadcrumbs, Button, call, createResource, toast } from "frappe-ui";
+import {
+  Alert,
+  Breadcrumbs,
+  Button,
+  call,
+  createResource,
+  toast,
+} from "frappe-ui";
 import {
   computed,
   defineAsyncComponent,
@@ -100,7 +121,6 @@ interface P {
   ticketId: string;
 }
 const router = useRouter();
-
 const props = defineProps<P>();
 
 const { getStatus } = useTicketStatusStore();
@@ -126,7 +146,7 @@ const ticket = createResource({
     });
   },
   onError: () => {
-    toast.error("Ticket not found");
+    toast.error(__("Ticket not found"));
     router.replace("/my-tickets");
   },
 });
@@ -139,7 +159,76 @@ const showFeedbackDialog = ref(false);
 const isExpanded = ref(false);
 
 const { isMobileView } = useScreenSize();
-const { $dialog } = globalStore();
+const { $dialog, $socket } = globalStore();
+const isDismissed = ref(false);
+
+function getTodayKey() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function dismissBanner() {
+  try {
+    const todayKey = getTodayKey();
+    localStorage.setItem(`dismissBanner_${props.ticketId}_${todayKey}`, "true");
+    isDismissed.value = true;
+  } catch (error) {
+    console.error("Error saving banner dismissal:", error);
+  }
+}
+
+onMounted(() => {
+  try {
+    const todayKey = getTodayKey();
+    const dismissed = localStorage.getItem(
+      `dismissBanner_${props.ticketId}_${todayKey}`
+    );
+    isDismissed.value = dismissed === "true";
+    cleanupOldBannerDismissals();
+  } catch (error) {
+    console.error("Error reading banner dismissal:", error);
+  }
+});
+
+// Clean up old banner dismissal localStorage keys
+const cleanupOldBannerDismissals = () => {
+  const CLEANUP_KEY = "lastBannerCleanup";
+  const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+  try {
+    const lastCleanup = localStorage.getItem(CLEANUP_KEY);
+    const now = Date.now();
+
+    if (lastCleanup && now - parseInt(lastCleanup) < ONE_WEEK_MS) {
+      return;
+    }
+
+    // Find and remove all dismissBanner keys
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("dismissBanner_")) {
+        keysToRemove.push(key);
+      }
+    }
+
+    // Remove the keys
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+    // Update last cleanup timestamp
+    localStorage.setItem(CLEANUP_KEY, now.toString());
+  } catch (error) {
+    console.error("Error cleaning up banner dismissals:", error);
+  }
+};
+
+const outsideHourSettings = createResource({
+  url: "helpdesk.helpdesk.doctype.hd_ticket.api.show_outside_hours_banner",
+  cache: ["OutsideHourBanner", props.ticketId],
+  params: {
+    ticket_name: props.ticketId,
+  },
+  auto: true,
+});
 
 const send = createResource({
   url: "run_doc_method",
@@ -185,7 +274,7 @@ function updateTicket(fieldname: string, value: string) {
     auto: true,
     onSuccess: () => {
       ticket.reload();
-      toast.success("Ticket updated");
+      toast.success(__("Ticket updated"));
     },
   });
 }
@@ -200,11 +289,11 @@ function handleClose() {
 
 function showConfirmationDialog() {
   $dialog({
-    title: "Close Ticket",
-    message: "Are you sure you want to close this ticket?",
+    title: __("Close Ticket"),
+    message: __("Are you sure you want to close this ticket?"),
     actions: [
       {
-        label: "Confirm",
+        label: __("Confirm"),
         variant: "solid",
         onClick(close: Function) {
           ticket.data.status = "Closed";
@@ -212,7 +301,7 @@ function showConfirmationDialog() {
             { fieldname: "status", value: "Closed" },
             {
               onSuccess: () => {
-                toast.success("Ticket closed");
+                toast.success(__("Ticket closed"));
               },
             }
           );
@@ -241,7 +330,7 @@ const setValue = createResource({
 });
 
 const breadcrumbs = computed(() => {
-  let items = [{ label: "Tickets", route: { name: "TicketsCustomer" } }];
+  let items = [{ label: __("Tickets"), route: { name: "TicketsCustomer" } }];
   items.push({
     label: ticket.data?.subject,
     route: { name: "TicketCustomer" },
@@ -260,12 +349,13 @@ const showFeedback = computed(() => {
   return hasAgentCommunication && isFeedbackMandatory;
 });
 const { startViewing, stopViewing } = useActiveViewers(props.ticketId);
+
 onMounted(() => {
   startViewing(props.ticketId);
   document.title = props.ticketId;
 
-  socket.on("helpdesk:ticket-update", ({ ticket_id }) => {
-    if (ticket_id === props.ticketId) {
+  $socket.on("helpdesk:ticket-update", ({ ticket_id }) => {
+    if (ticket_id == props.ticketId) {
       ticket.reload();
     }
   });

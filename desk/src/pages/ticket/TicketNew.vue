@@ -32,7 +32,26 @@
           @change="
             (e) => handleOnFieldChange(e, field.fieldname, field.fieldtype)
           "
-        />
+        >
+          <template v-if="field.fieldname === 'priority'" #label-extra>
+            <template
+              v-if="
+                ticketPriorityResource.dataMap[templateFields[field.fieldname]]
+                  ?.description
+              "
+            >
+              <Tooltip
+                :text="
+                  ticketPriorityResource.dataMap[
+                    templateFields[field.fieldname]
+                  ].description.trim()
+                "
+              >
+                <lucide-circle-question-mark class="h-4 w-4 text-ink-gray-6" />
+              </Tooltip>
+            </template>
+          </template>
+        </UniInput>
       </div>
       <!-- existing fields -->
       <div
@@ -41,13 +60,13 @@
       >
         <div class="flex flex-col gap-2">
           <span class="block text-sm text-gray-700">
-            Subject
+            {{ __("Subject") }}
             <span class="place-self-center text-red-500"> * </span>
           </span>
           <FormControl
             v-model="subject"
             type="text"
-            placeholder="A short description"
+            :placeholder="__('A short description')"
           />
         </div>
         <SearchArticles
@@ -60,20 +79,20 @@
             v-show="subject.length <= 2 && description.length === 0"
             class="text-p-sm text-gray-500 ml-1"
           >
-            Please enter a subject to continue
+            {{ __("Please enter a subject to continue") }}
           </h4>
           <TicketTextEditor
             v-show="subject.length > 2 || description.length > 0"
             ref="editor"
             v-model:attachments="attachments"
             v-model:content="description"
-            placeholder="Detailed explanation"
+            :placeholder="__('Detailed explanation')"
             expand
             :uploadFunction="(file:any)=>uploadFunction(file)"
           >
             <template #bottom-right>
               <Button
-                label="Submit"
+                :label="__('Submit')"
                 theme="gray"
                 variant="solid"
                 :disabled="
@@ -92,12 +111,12 @@
           ref="editor"
           v-model:attachments="attachments"
           v-model:content="description"
-          placeholder="Detailed explanation"
+          :placeholder="__('Detailed explanation')"
           expand
         >
           <template #bottom-right>
             <Button
-              label="Submit"
+              :label="__('Submit')"
               theme="gray"
               variant="solid"
               :disabled="
@@ -130,14 +149,17 @@ import {
   Button,
   call,
   createResource,
+  createListResource,
   FormControl,
   usePageMeta,
 } from "frappe-ui";
+import { __ } from "@/translation";
 import { useOnboarding } from "frappe-ui/frappe";
 import sanitizeHtml from "sanitize-html";
 import { computed, defineAsyncComponent, onMounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import SearchArticles from "../../components/SearchArticles.vue";
+
 const TicketTextEditor = defineAsyncComponent(
   () => import("./TicketTextEditor.vue")
 );
@@ -155,7 +177,6 @@ const router = useRouter();
 const { $dialog } = globalStore();
 const { updateOnboardingStep } = useOnboarding("helpdesk");
 const { isManager, userId: userID } = useAuthStore();
-
 const subject = ref("");
 const description = ref("");
 const attachments = ref([]);
@@ -186,6 +207,13 @@ function setupTemplateFields(fields) {
     templateFields[field.fieldname] = "";
   });
 }
+
+const ticketPriorityResource = createListResource({
+  doctype: "HD Ticket Priority",
+  fields: ["name", "description"],
+  auto: true,
+  cache: "ticketPriorities",
+});
 
 let oldFields = [];
 
@@ -276,13 +304,13 @@ function sanitize(html: string) {
 const breadcrumbs = computed(() => {
   const items = [
     {
-      label: "Tickets",
+      label: __("Tickets"),
       route: {
         name: isCustomerPortal.value ? "TicketsCustomer" : "TicketsAgent",
       },
     },
     {
-      label: "New Ticket",
+      label: __("New Ticket"),
       route: {
         name: "TicketNew",
       },
@@ -292,7 +320,7 @@ const breadcrumbs = computed(() => {
 });
 
 usePageMeta(() => ({
-  title: "New Ticket",
+  title: __("New Ticket"),
 }));
 
 onMounted(() => {

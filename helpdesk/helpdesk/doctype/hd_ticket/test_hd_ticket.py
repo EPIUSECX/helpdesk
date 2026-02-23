@@ -1,11 +1,19 @@
 # Copyright (c) 2023, Frappe Technologies and Contributors
 # See license.txt
 
+from datetime import timedelta
+
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_to_date, get_datetime, getdate
+from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
 
+from helpdesk.helpdesk.doctype.hd_ticket.api import (
+    merge_ticket,
+    show_outside_hours_banner,
+    split_ticket,
+)
 from helpdesk.test_utils import (
+    add_comment,
     add_holiday,
     get_current_week_monday,
     get_priority_response_resolution_time,
@@ -41,16 +49,18 @@ class TestHDTicket(IntegrationTestCase):
         frappe.get_doc(
             {"doctype": "User", "first_name": "Agent", "email": agent}
         ).insert(ignore_if_duplicate=True)
-        frappe.get_doc({"doctype": "HD Agent", "user": agent}).insert(
-            ignore_if_duplicate=True
-        )
+
+        frappe.get_doc(
+            {"doctype": "HD Agent", "user": agent, "agent_name": "agent"}
+        ).insert(ignore_if_duplicate=True)
 
         frappe.get_doc(
             {"doctype": "User", "first_name": "Agent2", "email": agent2}
         ).insert(ignore_if_duplicate=True)
-        frappe.get_doc({"doctype": "HD Agent", "user": agent2}).insert(
-            ignore_if_duplicate=True
-        )
+        frappe.get_doc(
+            {"doctype": "HD Agent", "user": agent2, "agent_name": "agent2"}
+        ).insert(ignore_if_duplicate=True)
+        frappe.set_value("HD Settings", "HD Settings", "enable_outside_hours_banner", 1)
 
     def test_ticket_creation(self):
         ticket = frappe.get_doc(get_ticket_obj())
@@ -458,7 +468,6 @@ class TestHDTicket(IntegrationTestCase):
 
         ticket.reload()
         with self.freeze_time(add_to_date(next_monday_date, minutes=30)):
-
             ticket.status = "Resolved"
             ticket.save()
             ticket = ticket.reload()
@@ -575,6 +584,126 @@ class TestHDTicket(IntegrationTestCase):
             ticket.status = "Closed"
             ticket.save()
             self.assertEqual(ticket.resolution_time, 30 * 60)
+
+    def test_ticket_merge(self):
+        ticket1 = make_ticket(description="Test Desc 1")
+        add_comment(ticket1.name, "First comment on ticket 1")
+
+        ticket2 = make_ticket(description="Test Desc 2")
+        add_comment(ticket2.name, "First comment on ticket 2")
+
+        merge_ticket(source=ticket1.name, target=ticket2.name)
+        ticket1.reload()
+        self.assertEqual(ticket1.status, "Closed")
+        self.assertTrue(ticket1.is_merged)
+        self.assertEqual(int(ticket1.merged_with), int(ticket2.name))
+
+        ticket2.reload()
+        comments = frappe.get_all(
+            "HD Ticket Comment",
+            filters={
+                "reference_ticket": ticket2.name,
+            },
+            fields=["content", "name"],
+        )
+        self.assertEqual(
+            len(comments), 3
+        )  # 2 original comments + 1 merge comment (Ticket 1 merged into Ticket 2)
+
+    def test_ticket_split(self):
+        ticket1 = make_ticket(description="Test Desc for split")
+        ticket1.reply_via_agent(message="Test reply to split")
+        communcation_name = frappe.get_all(
+            "Communication",
+            filters={
+                "reference_doctype": "HD Ticket",
+                "reference_name": ticket1.name,
+            },
+            pluck="name",
+        )[0]
+        self.assertTrue(communcation_name)
+
+        ticket2: str = split_ticket(
+            subject="Split Ticket", communication_id=communcation_name
+        )
+        ticket2_doc = frappe.get_doc("HD Ticket", ticket2)
+        self.assertTrue(ticket2_doc)
+        self.assertEqual(ticket2_doc.subject, "Split Ticket")
+        self.assertTrue(
+            frappe.get_value("Communication", communcation_name, "reference_name"),
+            ticket2_doc.name,
+        )
+
+    def test_ticket_inside_working_hours(self):
+        inside_working_hour = get_current_week_monday(hours=14)
+        with self.freeze_time(inside_working_hour):
+            ticket = make_ticket(priority="High")
+            self.assertFalse(ticket.raised_outside_working_hours)
+
+    def test_ticket_inside_working_hours_currently_outside(self):
+        inside_working_hour = get_current_week_monday(hours=14)
+        with self.freeze_time(inside_working_hour):
+            # Ticket created inside working hours
+            ticket = make_ticket(priority="High")
+            self.assertFalse(ticket.raised_outside_working_hours)
+            banner_shown = show_outside_hours_banner(ticket.name)["show"]
+            self.assertFalse(banner_shown)
+
+        ticket.reload()
+        with self.freeze_time(get_current_week_monday(hours=20)):
+            banner_shown = show_outside_hours_banner(ticket.name)["show"]
+            self.assertFalse(banner_shown)
+
+    def test_ticket_outside_working_hours(self):
+        outside_working_hour = get_current_week_monday(hours=8)
+        with self.freeze_time(outside_working_hour):
+            ticket = make_ticket(priority="High")
+            banner_shown = show_outside_hours_banner(ticket.name)["show"]
+            self.assertTrue(ticket.raised_outside_working_hours)
+            self.assertTrue(banner_shown)
+
+    def test_ticket_outside_working_hours_currently_in_working_hour(self):
+        outside_working_hours = get_current_week_monday(hours=8)
+        with self.freeze_time(outside_working_hours):
+            ticket = make_ticket(priority="High")
+            banner_shown = show_outside_hours_banner(ticket.name)["show"]
+            self.assertTrue(ticket.raised_outside_working_hours)
+            self.assertTrue(banner_shown)
+
+        ticket.reload()
+        newtime = add_to_date(get_current_week_monday(hours=14), days=1)
+        with self.freeze_time(newtime):
+            banner_shown = show_outside_hours_banner(ticket.name)["show"]
+            self.assertFalse(banner_shown)
+            self.assertTrue(ticket.raised_outside_working_hours)
+
+    def test_ticket_outside_working_hours_weekend(self):
+        weekend = add_to_date(get_current_week_monday(), days=5, hours=14)
+        with self.freeze_time(weekend):
+            ticket = make_ticket(priority="High")
+            banner_shown = show_outside_hours_banner(ticket.name)["show"]
+            self.assertTrue(ticket.raised_outside_working_hours)
+            self.assertTrue(banner_shown)
+
+    def test_ticket_outside_working_hours_agent_replied(self):
+        outside_working_hour = get_current_week_monday(hours=8)
+        with self.freeze_time(outside_working_hour):
+            ticket = make_ticket(priority="High")
+            ticket.reply_via_agent(message="Test reply to split")
+            banner_shown = show_outside_hours_banner(ticket.name)["show"]
+            self.assertTrue(ticket.raised_outside_working_hours)
+            self.assertFalse(banner_shown)
+
+    def test_if_banner_not_shown_after_next_working_day(self):
+        outside_working_hour_day_1 = get_current_week_monday(hours=20)
+        with self.freeze_time(outside_working_hour_day_1):
+            ticket = make_ticket(priority="low")
+
+        ticket.reload()
+        next_working_day = add_to_date(get_current_week_monday(hours=20), days=1)
+        with self.freeze_time(next_working_day):
+            banner_shown = show_outside_hours_banner(ticket.name)["show"]
+            self.assertFalse(banner_shown)
 
     def tearDown(self):
         remove_holidays()

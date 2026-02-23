@@ -1,25 +1,29 @@
 <template>
   <div class="space-y-1.5" v-if="field.display_via_depends_on">
     <span class="block text-sm text-gray-700">
-      {{ field.label }}
+      {{ __(field.label) }}
       <span v-if="field.required" class="place-self-center text-red-500">
         *
       </span>
     </span>
-    <component
-      :is="component"
-      :placeholder="placeholder"
-      :value="transValue"
-      :disabled="field.disabled"
-      :model-value="transValue"
-      @update:model-value="emitUpdate(field.fieldname, $event)"
-      @change="
-        emitUpdate(
-          field.fieldname,
-          $event.target?.value || $event.value || $event
-        )
-      "
-    />
+    <div class="flex gap-2 items-center">
+      <component
+        class="w-full"
+        :is="component"
+        :placeholder="placeholder"
+        :value="transValue"
+        :disabled="field.disabled"
+        :model-value="transValue"
+        @update:model-value="emitUpdate(field.fieldname, $event)"
+        @change="
+          emitUpdate(
+            field.fieldname,
+            $event.target?.value || $event.value || $event
+          )
+        "
+      />
+      <slot name="label-extra" />
+    </div>
   </div>
 </template>
 
@@ -27,7 +31,12 @@
 import { Autocomplete, Link } from "@/components";
 import { APIOptions, Field } from "@/types";
 import { parseApiOptions } from "@/utils";
-import { createResource, FormControl } from "frappe-ui";
+import {
+  createResource,
+  DatePicker,
+  DateTimePicker,
+  FormControl,
+} from "frappe-ui";
 import { computed, h } from "vue";
 
 type Value = string | number | boolean;
@@ -80,6 +89,15 @@ const component = computed(() => {
         },
       ],
       size: "sm",
+    });
+  } else if (props.field.fieldtype === "Datetime") {
+    return h(DateTimePicker, {
+      format: `${window.date_format.toUpperCase()} ${window.time_format}`,
+    });
+  } else if (props.field.fieldtype === "Date") {
+    return h(DatePicker, {
+      id: props.field.fieldname,
+      format: window.date_format.toUpperCase(),
     });
   } else {
     return h(FormControl, {

@@ -17,6 +17,9 @@ export const useConfigStore = defineStore("config", () => {
   const teamRestrictionApplied = computed(
     () => !!parseInt(config.value.restrict_tickets_by_agent_group)
   );
+  const disableGlobalScopeForSavedReplies = computed(
+    () => !!parseInt(config.value.disable_saved_replies_global_scope)
+  );
   const assignWithinTeam = computed(
     () => !!parseInt(config.value.assign_within_team)
   );
@@ -28,6 +31,9 @@ export const useConfigStore = defineStore("config", () => {
   );
   const isFeedbackMandatory = computed(
     () => !!parseInt(config.value.is_feedback_mandatory)
+  );
+  const enableCommentReactions = computed(
+    () => !!parseInt(config.value.enable_comment_reactions)
   );
 
   socket.on("helpdesk:settings-updated", () => configResource.reload());
@@ -43,5 +49,7 @@ export const useConfigStore = defineStore("config", () => {
     isFeedbackMandatory,
     teamRestrictionApplied,
     assignWithinTeam,
+    disableGlobalScopeForSavedReplies,
+    enableCommentReactions,
   };
 });

@@ -7,6 +7,7 @@ app_color = "grey"
 app_email = "hello@frappe.io"
 app_license = "AGPLv3"
 required_apps = ["telephony"]
+require_type_annotated_api_methods = True
 
 add_to_apps_screen = [
     {
@@ -67,10 +68,12 @@ doc_events = {
 
 has_permission = {
     "HD Ticket": "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.has_permission",
+    "HD Saved Reply": "helpdesk.helpdesk.doctype.hd_saved_reply.hd_saved_reply.has_permission",
 }
 
 permission_query_conditions = {
     "HD Ticket": "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.permission_query",
+    "HD Saved Reply": "helpdesk.helpdesk.doctype.hd_saved_reply.hd_saved_reply.permission_query",
 }
 
 # DocType Class
@@ -95,3 +98,4 @@ setup_wizard_complete = "helpdesk.setup.setup_wizard.setup_complete"
 # ---------------
 
 before_tests = "helpdesk.test_utils.before_tests"
+auth_hooks = ["helpdesk.auth.authenticate"]

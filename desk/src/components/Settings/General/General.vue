@@ -78,10 +78,10 @@ import { computed, provide, ref, watch } from "vue";
 import { __ } from "@/translation";
 import { disableSettingModalOutsideClick } from "../settingsModal";
 import SettingsLayoutBase from "@/components/layouts/SettingsLayoutBase.vue";
-import { HDSettingsSymbol } from "@/types";
+import { HDSettings, HDSettingsSymbol } from "@/types";
 
 const isDirty = ref(false);
-const initialData = ref(null);
+const initialData = ref<null | string>(null);
 const settingsData = ref({
   brandName: "",
   brandLogo: "",
@@ -95,10 +95,14 @@ const settingsData = ref({
   updateStatusTo: "",
   autoUpdateStatus: false,
   isFeedbackMandatory: false,
+  enableCommentReactions: false,
   allowAnyoneToCreateTickets: false,
   defaultTicketType: "",
   preferKnowledgeBase: false,
   skipEmailWorkflow: false,
+  disableSavedRepliesGlobalScope: false,
+  enableOutsideHoursBanner: false,
+  outsideWorkingHoursBannerMessage: "",
 });
 const disableSignup = ref(false);
 
@@ -111,7 +115,7 @@ const settingsDataResource = createResource({
     name: "HD Settings",
   },
   auto: true,
-  onSuccess(data) {
+  onSuccess(data: HDSettings) {
     settingsData.value = transformData(data);
     initialData.value = JSON.stringify(settingsData.value);
   },
@@ -143,15 +147,23 @@ const saveSettingsResource = createResource({
         update_status_to: settingsData.value.updateStatusTo,
         auto_update_status: settingsData.value.autoUpdateStatus,
         is_feedback_mandatory: settingsData.value.isFeedbackMandatory,
+        enable_comment_reactions: settingsData.value.enableCommentReactions,
         allow_anyone_to_create_tickets:
           settingsData.value.allowAnyoneToCreateTickets,
         default_ticket_type: settingsData.value.defaultTicketType,
         prefer_knowledge_base: settingsData.value.preferKnowledgeBase,
         skip_email_workflow: settingsData.value.skipEmailWorkflow,
+        disable_saved_replies_global_scope:
+          settingsData.value.disableSavedRepliesGlobalScope,
+
+        enable_outside_hours_banner:
+          settingsData.value.enableOutsideHoursBanner,
+        outside_working_hours_message:
+          settingsData.value.outsideWorkingHoursBannerMessage,
       },
     };
   },
-  onSuccess(data) {
+  onSuccess(data: HDSettings) {
     settingsData.value = transformData(data);
     initialData.value = JSON.stringify(settingsData.value);
   },
@@ -173,10 +185,16 @@ const transformData = (data: any) => {
     updateStatusTo: data.update_status_to,
     autoUpdateStatus: data.auto_update_status,
     isFeedbackMandatory: Boolean(data.is_feedback_mandatory),
+    enableCommentReactions: Boolean(data.enable_comment_reactions),
     allowAnyoneToCreateTickets: Boolean(data.allow_anyone_to_create_tickets),
     defaultTicketType: data.default_ticket_type,
     preferKnowledgeBase: Boolean(data.prefer_knowledge_base),
     skipEmailWorkflow: Boolean(data.skip_email_workflow),
+    disableSavedRepliesGlobalScope: Boolean(
+      data.disable_saved_replies_global_scope
+    ),
+    enableOutsideHoursBanner: Boolean(data.enable_outside_hours_banner),
+    outsideWorkingHoursBannerMessage: data.outside_working_hours_message || "",
   };
 };
 
@@ -188,7 +206,7 @@ const websiteSettingsResource = createResource({
     fields: ["disable_signup"],
   },
   auto: true,
-  onSuccess(data) {
+  onSuccess(data: any) {
     disableSignup.value = Boolean(data.disable_signup);
   },
 });
