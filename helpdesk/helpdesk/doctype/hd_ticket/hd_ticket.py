@@ -46,6 +46,20 @@ from ..hd_notification.utils import clear as clear_notifications
 from ..hd_service_level_agreement.utils import get_sla
 
 
+def on_ticket_communication(doc, method):
+    """Publish realtime event when a Communication for an HD Ticket is created/updated."""
+    if doc.reference_doctype != "HD Ticket" or not doc.reference_name:
+        return
+    ticket_name = str(doc.reference_name)
+    room = get_doc_room("HD Ticket", ticket_name)
+    frappe.publish_realtime(
+        "helpdesk:ticket-update",
+        message={"ticket_id": ticket_name},
+        room=room,
+        after_commit=True,
+    )
+
+
 class HDTicket(Document):
     @property
     def default_open_status(self):

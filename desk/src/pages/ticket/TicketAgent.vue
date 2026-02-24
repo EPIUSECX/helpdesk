@@ -54,6 +54,7 @@ const props = defineProps({
 });
 const route = useRoute();
 const showPhoneModal = ref(false);
+const activityPollInterval = ref<ReturnType<typeof setInterval> | null>(null);
 
 const ticketComposable = computed(() => useTicket(props.ticketId));
 const ticket = computed(() => ticketComposable.value.ticket);
@@ -154,12 +155,20 @@ onMounted(() => {
       reloadTicket(props.ticketId);
     }
   });
+
+  activityPollInterval.value = setInterval(() => {
+    ticketComposable.value.activities.reload();
+  }, 5000);
 });
 
 onBeforeUnmount(() => {
   stopViewing(props.ticketId);
   showEmailBox.value = false;
   showCommentBox.value = false;
+
+  if (activityPollInterval.value) {
+    clearInterval(activityPollInterval.value);
+  }
 
   $socket.off("ticket_update");
   $socket.off("helpdesk:ticket-comment");
