@@ -173,6 +173,7 @@ import SettingsModal from "@/components/Settings/SettingsModal.vue";
 import UserMenu from "@/components/UserMenu.vue";
 import { useDevice } from "@/composables";
 import { confirmLoginToFrappeCloud } from "@/composables/fc";
+import { useSkipEmailWorkflow } from "@/composables/useSkipEmailWorkflow";
 import { useScreenSize } from "@/composables/screen";
 import { currentView, useView } from "@/composables/useView";
 import { showNewContactModal } from "@/pages/desk/contact/dialogState";
@@ -238,6 +239,7 @@ const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
 const { isExpanded, width } = storeToRefs(useSidebarStore());
 const device = useDevice();
+const { skipEmailWorkflow } = useSkipEmailWorkflow();
 const telephonyStore = useTelephonyStore();
 const { isCallingEnabled } = storeToRefs(telephonyStore);
 
@@ -457,8 +459,13 @@ const steps = [
     icon: markRaw(MailOpen),
     onClick: async () => {
       await handleFirstTicketNavigation();
-      showEmailBox.value = true;
-      showCommentBox.value = false;
+      if (skipEmailWorkflow.value) {
+        showCommentBox.value = true;
+        showEmailBox.value = false;
+      } else {
+        showEmailBox.value = true;
+        showCommentBox.value = false;
+      }
       minimize.value = true;
     },
   },

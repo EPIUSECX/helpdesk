@@ -206,7 +206,6 @@ import {
 import { __ } from "@/translation";
 import {
   computed,
-  ComputedRef,
   h,
   onMounted,
   onUnmounted,
@@ -238,8 +237,9 @@ import { useScreenSize } from "@/composables/screen";
 import { globalStore } from "@/stores/globalStore";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { useUserStore } from "@/stores/user";
-import { TabObject, TicketTab } from "@/types";
+import { TicketTab } from "@/types";
 import { useActiveTabManager } from "@/composables/useActiveTabManager";
+import { useActivityTabsMobile } from "@/composables/useActivityTabs";
 import { useTelephonyStore } from "@/stores/telephony";
 import { storeToRefs } from "pinia";
 import { HDTicketStatus } from "@/types/doctypes";
@@ -346,41 +346,10 @@ const dropdownOptions = computed(() =>
   }))
 );
 
-const tabs: ComputedRef<TabObject[]> = computed(() => {
-  const _tabs = [
-    {
-      name: "details",
-      label: __("Details"),
-      icon: DetailsIcon,
-      condition: () => isMobileView.value,
-    },
-    {
-      name: "activity",
-      label: __("Activity"),
-      icon: ActivityIcon,
-    },
-    {
-      name: "email",
-      label: __("Emails"),
-      icon: EmailIcon,
-    },
-    {
-      name: "comment",
-      label: __("Comments"),
-      icon: CommentIcon,
-    },
-  ];
-
-  if (isCallingEnabled.value) {
-    _tabs.push({
-      name: "call",
-      label: __("Calls"),
-      icon: PhoneIcon,
-    });
-  }
-  return _tabs;
+const tabs = useActivityTabsMobile(isCallingEnabled, {
+  isMobileView,
+  DetailsIcon,
 });
-
 const { tabIndex, changeTabTo } = useActiveTabManager(tabs);
 
 const activities = computed(() => {

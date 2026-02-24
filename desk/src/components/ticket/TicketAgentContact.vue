@@ -15,13 +15,15 @@
             </template>
           </Button>
         </Tooltip>
-        <Tooltip :text="contact.email_id">
-          <Button @click="openEmailBox()">
-            <template #icon>
-              <EmailIcon class="size-4" />
-            </template>
-          </Button>
-        </Tooltip>
+        <span v-if="!skipEmailWorkflow">
+          <Tooltip :text="contact.email_id">
+            <Button @click="openEmailBox()">
+              <template #icon>
+                <EmailIcon class="size-4" />
+              </template>
+            </Button>
+          </Tooltip>
+        </span>
         <!-- <RouterLink
           class="group cursor-pointer space-x-1 hover:text-gray-900"
           :to="{
@@ -54,12 +56,14 @@
 
 <script setup lang="ts">
 import { EmailIcon, PhoneIcon } from "@/components/icons/";
+import { useSkipEmailWorkflow } from "@/composables/useSkipEmailWorkflow";
 import { useTelephonyStore } from "@/stores/telephony";
 import { Avatar, Tooltip, Button } from "frappe-ui";
 import { storeToRefs } from "pinia";
 import SetContactPhoneModal from "./SetContactPhoneModal.vue";
 import { inject, ref } from "vue";
 
+const { skipEmailWorkflow } = useSkipEmailWorkflow();
 const telephonyStore = useTelephonyStore();
 const { isCallingEnabled } = storeToRefs(telephonyStore);
 const showPhoneModal = ref(false);

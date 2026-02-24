@@ -4,17 +4,19 @@
       class="flex justify-between gap-3 border-t px-6 md:px-10 py-4 md:py-2.5"
     >
       <div class="flex gap-1.5 items-center">
-        <Button
-          ref="sendEmailRef"
-          variant="ghost"
-          label="Reply"
-          :class="[showEmailBox ? '!bg-gray-300 hover:!bg-gray-200' : '']"
-          @click="toggleEmailBox()"
-        >
-          <template #prefix>
-            <EmailIcon class="h-4" />
-          </template>
-        </Button>
+        <span v-if="!skipEmailWorkflow">
+          <Button
+            ref="sendEmailRef"
+            variant="ghost"
+            label="Reply"
+            :class="[showEmailBox ? '!bg-gray-300 hover:!bg-gray-200' : '']"
+            @click="toggleEmailBox()"
+          >
+            <template #prefix>
+              <EmailIcon class="h-4" />
+            </template>
+          </Button>
+        </span>
         <Button
           variant="ghost"
           label="Comment"
@@ -29,6 +31,7 @@
       </div>
     </div>
     <div
+      v-if="!skipEmailWorkflow"
       ref="emailBoxRef"
       v-show="showEmailBox"
       class="flex gap-1.5 flex-1"
@@ -100,12 +103,14 @@ import { CommentIcon, EmailIcon } from "@/components/icons/";
 import { useDevice } from "@/composables";
 import { useScreenSize } from "@/composables/screen";
 import { useShortcut } from "@/composables/shortcuts";
+import { useSkipEmailWorkflow } from "@/composables/useSkipEmailWorkflow";
 import { showCommentBox, showEmailBox } from "@/pages/ticket/modalStates";
 import { ref, watch } from "vue";
 import { onClickOutside } from "@vueuse/core";
 
 const emit = defineEmits(["update"]);
 const content = defineModel("content");
+const { skipEmailWorkflow } = useSkipEmailWorkflow();
 const { isMac } = useDevice();
 const { isMobileView } = useScreenSize();
 let doc = defineModel();
@@ -149,6 +154,7 @@ function splitIfString(str: string | string[]) {
 }
 
 function replyToEmail(data: object) {
+  if (skipEmailWorkflow.value) return;
   showEmailBox.value = true;
 
   emailEditorRef.value.addToReply(
@@ -201,6 +207,7 @@ watch(
 );
 
 useShortcut("r", () => {
+  if (skipEmailWorkflow.value) return;
   toggleEmailBox();
 });
 useShortcut("c", () => {

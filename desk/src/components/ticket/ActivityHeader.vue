@@ -5,16 +5,18 @@
     <div class="flex h-8 items-center text-xl font-semibold text-gray-800">
       {{ title }}
     </div>
-    <Button
-      v-if="title == 'Emails'"
-      variant="solid"
-      @click="communicationAreaRef?.toggleEmailBox() ?? toggleEmailBox()"
-    >
-      <template #prefix>
-        <FeatherIcon name="plus" class="h-4 w-4" />
-      </template>
-      <span>{{ __("New Email") }}</span>
-    </Button>
+    <span v-if="!skipEmailWorkflow">
+      <Button
+        v-if="title == 'Emails'"
+        variant="solid"
+        @click="communicationAreaRef?.toggleEmailBox() ?? toggleEmailBox()"
+      >
+        <template #prefix>
+          <FeatherIcon name="plus" class="h-4 w-4" />
+        </template>
+        <span>{{ __("New Email") }}</span>
+      </Button>
+    </span>
     <Button
       v-else-if="title == 'Comments'"
       variant="solid"
@@ -67,12 +69,14 @@
 
 <script setup lang="ts">
 import { CommentIcon, EmailIcon, PhoneIcon } from "@/components/icons";
+import { useActivityHeaderActions } from "@/composables/useActivityHeaderActions";
+import { useSkipEmailWorkflow } from "@/composables/useSkipEmailWorkflow";
 import CallLogModal from "@/pages/call-logs/CallLogModal.vue";
 import { useTelephonyStore } from "@/stores/telephony";
 import { toggleCommentBox, toggleEmailBox } from "@/pages/ticket/modalStates";
 import { Dropdown } from "frappe-ui";
 import { storeToRefs } from "pinia";
-import { computed, h, inject, ref, Ref } from "vue";
+import { inject, ref, Ref } from "vue";
 import { __ } from "@/translation";
 defineProps({
   title: {
@@ -87,46 +91,14 @@ const refreshTicket = inject<() => void>("refreshTicket");
 const showCallLogModal = ref(false);
 const { isCallingEnabled } = storeToRefs(useTelephonyStore());
 const ticketId = inject<string>("ticketId");
-
-const defaultActions = computed(() => {
-  let actions = [
-    {
-      icon: h(EmailIcon, { class: "h-4 w-4" }),
-      label: __("Email"),
-      onClick: () =>
-        communicationAreaRef?.value?.toggleEmailBox() ?? toggleEmailBox(),
-    },
-    {
-      icon: h(CommentIcon, { class: "h-4 w-4" }),
-      label: __("Comment"),
-      onClick: () =>
-        communicationAreaRef?.value?.toggleCommentBox() ?? toggleCommentBox(),
-    },
-  ];
-
-  if (isCallingEnabled.value) {
-    actions.push(...callActions.value);
-  }
-
-  return actions;
-});
-
-const callActions = computed(() => {
-  let actions = [
-    {
-      icon: h(PhoneIcon, { class: "h-4 w-4" }),
-      label: __("Make a Call"),
-      onClick: () => makeCall(),
-    },
-    {
-      icon: "edit-3",
-      label: __("Log a Call"),
-      onClick: () => {
-        showCallLogModal.value = true;
-      },
-    },
-  ];
-  return actions;
+const { skipEmailWorkflow } = useSkipEmailWorkflow();
+const { defaultActions, callActions } = useActivityHeaderActions({
+  communicationAreaRef,
+  isCallingEnabled,
+  toggleEmailBox,
+  toggleCommentBox,
+  makeCall: makeCall ?? (() => {}),
+  showCallLogModal,
 });
 </script>
 

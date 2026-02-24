@@ -46,12 +46,14 @@
             {{ timeAgo(creation) }}
           </p>
         </Tooltip>
-        <Button variant="ghost" class="text-gray-700" @click="reply">
-          <ReplyIcon class="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" class="text-gray-700" @click="replyAll">
-          <ReplyAllIcon class="h-4 w-4" />
-        </Button>
+        <span v-if="!skipEmailWorkflow">
+          <Button variant="ghost" class="text-gray-700" @click="reply">
+            <ReplyIcon class="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" class="text-gray-700" @click="replyAll">
+            <ReplyAllIcon class="h-4 w-4" />
+          </Button>
+        </span>
         <Dropdown
           v-if="showSplitOption"
           :placement="'right'"
@@ -107,6 +109,7 @@
 <script setup lang="ts">
 import { AttachmentItem } from "@/components";
 import { useScreenSize } from "@/composables/screen";
+import { useSkipEmailWorkflow } from "@/composables/useSkipEmailWorkflow";
 import { dateFormat, dateTooltipFormat, timeAgo } from "@/utils";
 import { Dropdown } from "frappe-ui";
 import { computed, ref } from "vue";
@@ -140,6 +143,7 @@ const {
   deliveryStatus,
 } = props.activity;
 
+const { skipEmailWorkflow } = useSkipEmailWorkflow();
 const emit = defineEmits(["reply"]);
 
 const auth = storeToRefs(useAuthStore());

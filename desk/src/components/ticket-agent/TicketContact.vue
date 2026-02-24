@@ -17,15 +17,20 @@
         </div>
       </Tooltip>
       <div class="flex gap-1.5">
-        <Tooltip :text="contact.data.email_id">
-          <!-- Email Button -->
-          <Button size="sm" @click="toggleEmailBox()">
-            <template #icon>
-              <EmailIcon class="size-4" />
-            </template>
-          </Button>
-          <!-- Call Button -->
-          <Button size="sm" v-if="isCallingEnabled" @click="callContact">
+        <span v-if="!skipEmailWorkflow">
+          <Tooltip :text="contact.data.email_id">
+            <Button size="sm" @click="toggleEmailBox()">
+              <template #icon>
+                <EmailIcon class="size-4" />
+              </template>
+            </Button>
+          </Tooltip>
+        </span>
+        <Tooltip
+          v-if="isCallingEnabled"
+          :text="`Call ${contact.data.name || contact.data.email_id}`"
+        >
+          <Button size="sm" @click="callContact">
             <template #icon>
               <PhoneIcon class="size-4" />
             </template>
@@ -42,6 +47,7 @@
 </template>
 
 <script setup lang="ts">
+import { useSkipEmailWorkflow } from "@/composables/useSkipEmailWorkflow";
 import { toggleEmailBox } from "@/pages/ticket/modalStates";
 import { useTelephonyStore } from "@/stores/telephony";
 import { useUserStore } from "@/stores/user";
@@ -54,6 +60,7 @@ import EmailIcon from "../icons/EmailIcon.vue";
 import PhoneIcon from "../icons/PhoneIcon.vue";
 import SetContactPhoneModal from "../ticket/SetContactPhoneModal.vue";
 
+const { skipEmailWorkflow } = useSkipEmailWorkflow();
 const telephonyStore = useTelephonyStore();
 const { getUser } = useUserStore();
 const { isCallingEnabled } = storeToRefs(telephonyStore);

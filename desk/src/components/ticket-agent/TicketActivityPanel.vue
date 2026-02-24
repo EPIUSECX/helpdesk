@@ -57,17 +57,17 @@ import {
   PhoneIcon,
 } from "@/components/icons";
 import { useActiveTabManager } from "@/composables/useActiveTabManager";
+import { useActivityTabs } from "@/composables/useActivityTabs";
 import { useTelephonyStore } from "@/stores/telephony";
 import {
   ActivitiesSymbol,
   FeedbackActivity,
-  TabObject,
   TicketSymbol,
   TicketTab,
 } from "@/types";
 import { LoadingIndicator, Tabs } from "frappe-ui";
 import { storeToRefs } from "pinia";
-import { computed, ComputedRef, defineAsyncComponent, inject, ref } from "vue";
+import { computed, defineAsyncComponent, inject, ref } from "vue";
 import TicketAgentActivities from "../ticket/TicketAgentActivities.vue";
 
 const CommunicationArea = defineAsyncComponent(
@@ -81,36 +81,7 @@ const ticketAgentActivitiesRef = ref(null);
 const communicationAreaRef = ref(null);
 const telephonyStore = useTelephonyStore();
 const { isCallingEnabled } = storeToRefs(telephonyStore);
-
-const tabs: ComputedRef<TabObject[]> = computed(() => {
-  const _tabs: TabObject[] = [
-    {
-      name: "activity",
-      label: "Activity",
-      icon: ActivityIcon,
-    },
-    {
-      name: "email",
-      label: "Emails",
-      icon: EmailIcon,
-    },
-    {
-      name: "comment",
-      label: "Comments",
-      icon: CommentIcon,
-    },
-  ];
-
-  if (isCallingEnabled.value) {
-    _tabs.push({
-      name: "call",
-      label: "Calls",
-      icon: PhoneIcon,
-    });
-  }
-  return _tabs;
-});
-
+const tabs = useActivityTabs(isCallingEnabled);
 const { tabIndex, changeTabTo } = useActiveTabManager(tabs);
 
 // TODO: refactor for pagination

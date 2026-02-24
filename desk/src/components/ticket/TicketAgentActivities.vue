@@ -82,11 +82,13 @@
     >
       <component :is="emptyTextIcon" class="h-10 w-10" />
       <span>{{ emptyText }}</span>
-      <Button
-        v-if="title == 'Emails'"
-        label="New Email"
-        @click="communicationAreaRef?.toggleEmailBox() ?? toggleEmailBox()"
-      />
+      <span v-if="!skipEmailWorkflow">
+        <Button
+          v-if="title == 'Emails'"
+          label="New Email"
+          @click="communicationAreaRef?.toggleEmailBox() ?? toggleEmailBox()"
+        />
+      </span>
       <Button
         v-else-if="title == 'Comments'"
         label="New Comment"
@@ -110,6 +112,7 @@ import {
   EmailIcon,
   PhoneIcon,
 } from "@/components/icons";
+import { useSkipEmailWorkflow } from "@/composables/useSkipEmailWorkflow";
 import { toggleCommentBox, toggleEmailBox } from "@/pages/ticket/modalStates";
 import { useUserStore } from "@/stores/user";
 import { TicketActivity } from "@/types";
@@ -158,6 +161,7 @@ const HistoryBox = defineAsyncComponent(
 const route = useRoute();
 const router = useRouter();
 
+const { skipEmailWorkflow } = useSkipEmailWorkflow();
 const { getUser } = useUserStore();
 const communicationAreaRef: Ref = inject("communicationArea");
 const makeCall = inject<() => void>("makeCall");
