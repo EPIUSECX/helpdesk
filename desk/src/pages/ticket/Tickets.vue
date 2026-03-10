@@ -183,10 +183,8 @@ const options = {
             isCustomerLast ? __("Customer") : __("Agent")
           ),
           h("span", { class: "text-ink-gray-4" }, "·"),
-          h(
-            Tooltip,
-            { text: dayjs(lastTs).long() },
-            () => h("span", { class: "text-ink-gray-6" }, dayjs.tz(lastTs).fromNow())
+          h(Tooltip, { text: dayjs(lastTs).long() }, () =>
+            h("span", { class: "text-ink-gray-6" }, dayjs.tz(lastTs).fromNow())
           ),
         ]);
       },
@@ -209,6 +207,37 @@ const options = {
   hideColumnSetting: false,
 };
 
+// Returns a small urgency dot VNode when the SLA deadline is approaching but
+// not yet breached. Critical (<15 min) gets a pulsing dot; warning (<1 hr)
+// gets a static dot. Returns null when no indicator is needed.
+function getSlaUrgencyDot(deadlineStr: string) {
+  const minutesLeft = dayjs(deadlineStr).diff(dayjs(), "minute");
+  if (minutesLeft <= 0) return null;
+  if (minutesLeft <= 15) {
+    return h(
+      "span",
+      {
+        class: "animate-pulse text-ink-gray-9 text-xs leading-none shrink-0",
+        title: __("SLA breach imminent"),
+        "aria-label": __("SLA breach imminent"),
+      },
+      "●"
+    );
+  }
+  if (minutesLeft <= 60) {
+    return h(
+      "span",
+      {
+        class: "text-ink-gray-6 text-xs leading-none shrink-0",
+        title: __("SLA breach approaching"),
+        "aria-label": __("SLA breach approaching"),
+      },
+      "●"
+    );
+  }
+  return null;
+}
+
 function handle_response_by_field(row: any, item: string) {
   if (!row.first_responded_on && dayjs(item).isBefore(new Date())) {
     return h(Badge, {
@@ -230,12 +259,16 @@ function handle_response_by_field(row: any, item: string) {
       variant: "outline",
     });
   } else {
+    const dot = getSlaUrgencyDot(item);
     return h(
-      Tooltip,
-      {
-        text: dayjs(item).long(),
-      },
-      () => dayjs.tz(item).fromNow()
+      "div",
+      { class: "flex items-center gap-1" },
+      [
+        dot,
+        h(Tooltip, { text: dayjs(item).long() }, () =>
+          dayjs.tz(item).fromNow()
+        ),
+      ].filter(Boolean)
     );
   }
 }
@@ -261,12 +294,16 @@ function handle_resolution_by_field(row: any, item: string) {
       variant: "outline",
     });
   } else {
+    const dot = getSlaUrgencyDot(item);
     return h(
-      Tooltip,
-      {
-        text: dayjs(item).long(),
-      },
-      () => dayjs.tz(item).fromNow()
+      "div",
+      { class: "flex items-center gap-1" },
+      [
+        dot,
+        h(Tooltip, { text: dayjs(item).long() }, () =>
+          dayjs.tz(item).fromNow()
+        ),
+      ].filter(Boolean)
     );
   }
 }
