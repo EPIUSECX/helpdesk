@@ -695,6 +695,13 @@ class HDTicket(Document):
         if not new_ticket:
             self.status = self.ticket_reopen_status
             self.save(ignore_permissions=True)
+            # Clear seen list so agents are notified of new customer activity.
+            # Uses direct DB write to avoid triggering on_update hooks and changing
+            # the modified timestamp (which would affect sort order). Note: this
+            # bypasses the ORM, so concurrent mark_seen() calls may race.
+            frappe.db.set_value(
+                "HD Ticket", self.name, "_seen", "[]", update_modified=False
+            )
 
         c = frappe.new_doc("Communication")
         c.communication_type = "Communication"
