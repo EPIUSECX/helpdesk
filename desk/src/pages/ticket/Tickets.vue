@@ -75,6 +75,8 @@ import { __ } from "@/translation";
 import { View } from "@/types";
 import { getIcon, isCustomerPortal } from "@/utils";
 import { Badge, FeatherIcon, toast, Tooltip, usePageMeta } from "frappe-ui";
+import LucideHeadphones from "~icons/lucide/headphones";
+import LucideUser from "~icons/lucide/user";
 import { computed, h, onMounted, onUnmounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -157,6 +159,37 @@ const options = {
     },
     resolution_by: {
       custom: ({ row, item }) => handle_resolution_by_field(row, item),
+    },
+    last_customer_response: {
+      custom: ({ row }) => {
+        const customerTs = row.last_customer_response
+          ? new Date(row.last_customer_response).getTime()
+          : 0;
+        const agentTs = row.last_agent_response
+          ? new Date(row.last_agent_response).getTime()
+          : 0;
+        if (!customerTs && !agentTs) return null;
+        const isCustomerLast = customerTs >= agentTs;
+        const lastTs = isCustomerLast
+          ? row.last_customer_response
+          : row.last_agent_response;
+        return h("div", { class: "flex items-center gap-1.5" }, [
+          h(isCustomerLast ? LucideUser : LucideHeadphones, {
+            class: "h-3.5 w-3.5 text-ink-gray-6 shrink-0",
+          }),
+          h(
+            "span",
+            { class: "truncate text-ink-gray-9" },
+            isCustomerLast ? __("Customer") : __("Agent")
+          ),
+          h("span", { class: "text-ink-gray-4" }, "·"),
+          h(
+            Tooltip,
+            { text: dayjs(lastTs).long() },
+            () => h("span", { class: "text-ink-gray-6" }, dayjs.tz(lastTs).fromNow())
+          ),
+        ]);
+      },
     },
   },
   isCustomerPortal: isCustomerPortal.value,

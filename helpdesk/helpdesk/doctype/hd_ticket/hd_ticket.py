@@ -1063,6 +1063,12 @@ class HDTicket(Document):
                 "width": "10rem",
             },
             {
+                "label": "Last Reply",
+                "type": "Data",
+                "key": "last_customer_response",
+                "width": "8rem",
+            },
+            {
                 "label": "Created",
                 "type": "Datetime",
                 "key": "creation",
@@ -1140,6 +1146,8 @@ class HDTicket(Document):
             "creation",
             "_assign",
             "resolution_date",
+            "last_customer_response",
+            "last_agent_response",
         ]
         return {
             "columns": (

@@ -105,6 +105,10 @@ def get_list_data(
     rows.append("name") if "name" not in rows else rows
     if doctype == "HD Ticket":
         rows.append("_seen") if "_seen" not in rows else rows
+        if "last_customer_response" not in rows:
+            rows.append("last_customer_response")
+        if "last_agent_response" not in rows:
+            rows.append("last_agent_response")
     data = (
         frappe.get_list(
             doctype,
