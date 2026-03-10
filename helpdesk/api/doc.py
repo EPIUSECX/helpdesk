@@ -393,6 +393,11 @@ def sort_options(doctype: str, show_customer_portal_fields: bool = False):
 
     fields.extend(standard_fields)
 
+    # Expose the denormalized priority rank so agents can build compound sorts such as
+    # "Priority (Urgency) asc, Last Modified desc" without alphabetic name ordering.
+    if doctype == "HD Ticket":
+        fields.append({"label": "Priority (Urgency)", "value": "priority_order"})
+
     return fields
 
 

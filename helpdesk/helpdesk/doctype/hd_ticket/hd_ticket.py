@@ -280,12 +280,21 @@ class HDTicket(Document):
                 self.customer = customer[0]
 
     def set_priority(self):
-        if self.priority:
-            return
-        self.priority = (
-            frappe.get_cached_value("HD Ticket Type", self.ticket_type, "priority")
-            or frappe.get_cached_value("HD Settings", "HD Settings", "default_priority")
-            or DEFAULT_TICKET_PRIORITY
+        if not self.priority:
+            self.priority = (
+                frappe.get_cached_value("HD Ticket Type", self.ticket_type, "priority")
+                or frappe.get_cached_value(
+                    "HD Settings", "HD Settings", "default_priority"
+                )
+                or DEFAULT_TICKET_PRIORITY
+            )
+        # Keep priority_order in sync so compound sort (priority_order asc, modified desc)
+        # surfaces high-urgency tickets first regardless of last-edit time.
+        self.priority_order = (
+            frappe.get_cached_value(
+                "HD Ticket Priority", self.priority, "integer_value"
+            )
+            or 0
         )
 
     def set_first_responded_on(self):
@@ -1144,6 +1153,7 @@ class HDTicket(Document):
             "subject",
             "status",
             "priority",
+            "priority_order",
             "ticket_type",
             "agent_group",
             "contact",

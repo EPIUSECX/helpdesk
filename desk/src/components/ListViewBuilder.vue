@@ -287,7 +287,12 @@ const defaultParams = reactive({
   doctype: options.value.doctype,
   filters: {},
   default_filters: options.value.defaultFilters,
-  order_by: "modified desc",
+  // HD Ticket uses a compound sort: highest-urgency (lowest integer_value) first,
+  // then most-recently-modified within the same priority tier.
+  order_by:
+    options.value.doctype === "HD Ticket"
+      ? "priority_order asc, modified desc"
+      : "modified desc",
   page_length: pageLengthCount.value,
   page_length_count: pageLengthCount.value,
   view: options.value.view,
@@ -574,7 +579,10 @@ function updateColumns(obj) {
 function reload(reset: boolean = false) {
   if (reset) {
     defaultParams.filters = options.value.defaultFilters || {};
-    defaultParams.order_by = "modified desc";
+    defaultParams.order_by =
+      options.value.doctype === "HD Ticket"
+        ? "priority_order asc, modified desc"
+        : "modified desc";
     defaultParams.page_length = options.value.default_page_length;
     pageLengthCount.value = options.value.default_page_length;
     defaultParams.page_length_count = pageLengthCount.value;
@@ -643,7 +651,11 @@ function handleViewChanges() {
     return;
   }
   defaultParams.filters = currentView.filters;
-  defaultParams.order_by = currentView.order_by || "modified desc";
+  defaultParams.order_by =
+    currentView.order_by ||
+    (options.value.doctype === "HD Ticket"
+      ? "priority_order asc, modified desc"
+      : "modified desc");
   defaultParams.columns = currentView.columns;
   defaultParams.rows = currentView.rows;
 
