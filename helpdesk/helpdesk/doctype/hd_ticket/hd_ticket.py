@@ -1085,7 +1085,7 @@ class HDTicket(Document):
                 "label": "Last Reply",
                 "type": "Data",
                 "key": "last_customer_response",
-                "width": "8rem",
+                "width": "14rem",
             },
             {
                 "label": "Created",

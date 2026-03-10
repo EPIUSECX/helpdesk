@@ -120,12 +120,14 @@ const options = {
       custom: ({ row, item }) => {
         const seenBy = row._seen ? JSON.parse(row._seen) : [];
         const isSeen = seenBy.includes(userId || "");
-        return h(
-          "span",
-          {
-            class: ["truncate flex-1", !isSeen && "font-semibold"],
-          },
-          item
+        return h(Tooltip, { text: item }, () =>
+          h(
+            "span",
+            {
+              class: ["truncate flex-1", !isSeen && "font-semibold"],
+            },
+            item
+          )
         );
       },
     },
