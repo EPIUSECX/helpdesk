@@ -281,19 +281,14 @@ const defaultEmptyState = {
 
 const pageLengthCount = useStorage(
   `list_page_length_count+${props.options.doctype}`,
-  options.value.default_page_length
+  options.value.default_page_length,
 );
 
 const defaultParams = reactive({
   doctype: options.value.doctype,
   filters: {},
   default_filters: options.value.defaultFilters,
-  // HD Ticket uses a compound sort: highest-urgency (lowest integer_value) first,
-  // then most-recently-modified within the same priority tier.
-  order_by:
-    options.value.doctype === "HD Ticket"
-      ? "priority_order asc, modified desc"
-      : "modified desc",
+  order_by: "modified desc",
   page_length: pageLengthCount.value,
   page_length_count: pageLengthCount.value,
   view: options.value.view,
@@ -346,8 +341,8 @@ function selectBannerOptions(selections: Set<string>, unselectAll = () => {}) {
     .filter(
       (action) =>
         !userActions.some(
-          (defaultAction) => defaultAction.label === action.label
-        )
+          (defaultAction) => defaultAction.label === action.label,
+        ),
     )
     .map((action) => ({
       ...action,
@@ -377,7 +372,7 @@ function getGroupedByRows(listRows, groupByField) {
       filteredRows = listRows.filter((row) => !row[groupByField.name]);
     } else {
       filteredRows = listRows.filter(
-        (row) => row[groupByField.name] == option.value
+        (row) => row[groupByField.name] == option.value,
       );
     }
 
@@ -465,7 +460,7 @@ function listCell(column: any, row: any, item: any, idx: number) {
       h("span", {
         class: "truncate text-base text-ink-gray-6",
         textContent: item,
-      })
+      }),
     );
   }
   if (column.type === "Datetime") {
@@ -473,7 +468,7 @@ function listCell(column: any, row: any, item: any, idx: number) {
       h("span", {
         class: "text-p-xs",
         textContent: formatTimeShort(item),
-      })
+      }),
     );
   }
   if (column.type === "MultipleAvatar") {
@@ -495,7 +490,7 @@ function listCell(column: any, row: any, item: any, idx: number) {
     h("span", {
       class: "truncate flex-1",
       textContent: item,
-    })
+    }),
   );
 }
 
@@ -588,10 +583,7 @@ function updateColumns(obj) {
 function reload(reset: boolean = false) {
   if (reset) {
     defaultParams.filters = options.value.defaultFilters || {};
-    defaultParams.order_by =
-      options.value.doctype === "HD Ticket"
-        ? "priority_order asc, modified desc"
-        : "modified desc";
+    defaultParams.order_by = "modified desc";
     defaultParams.page_length = options.value.default_page_length;
     pageLengthCount.value = options.value.default_page_length;
     defaultParams.page_length_count = pageLengthCount.value;
@@ -660,11 +652,7 @@ function handleViewChanges() {
     return;
   }
   defaultParams.filters = currentView.filters;
-  defaultParams.order_by =
-    currentView.order_by ||
-    (options.value.doctype === "HD Ticket"
-      ? "priority_order asc, modified desc"
-      : "modified desc");
+  defaultParams.order_by = currentView.order_by || "modified desc";
   defaultParams.columns = currentView.columns;
   defaultParams.rows = currentView.rows;
 
@@ -692,12 +680,12 @@ watch(
       headerView.value.label = __("List");
       headerView.value.icon = LucideAlignJustify;
     }
-  }
+  },
 );
 
 const listScrollPosition = useStorage(
   `list_position+${props.options.doctype}`,
-  0
+  0,
 );
 function handleListScroll(e) {
   listScrollPosition.value = e.target.scrollTop;
