@@ -438,7 +438,7 @@ class HDTicket(Document):
         return True
 
     @frappe.whitelist()
-    def assign_agent(self, agent: str):
+    def assign_agent(self: "HDTicket", agent: str):
         assign({"assign_to": [agent], "doctype": "HD Ticket", "name": self.name})
 
         if frappe.session.user != agent:
@@ -492,7 +492,7 @@ class HDTicket(Document):
         return bool(int(check))
 
     @frappe.whitelist()
-    def get_last_communication(self):
+    def get_last_communication(self: "HDTicket"):
         filters = {
             "reference_doctype": "HD Ticket",
             "reference_name": ["=", str(self.name)],
@@ -543,7 +543,7 @@ class HDTicket(Document):
         return f"{root_uri}/helpdesk/my-tickets/{self.name}"
 
     @frappe.whitelist()
-    def new_comment(self, content: str, attachments: list[str] = []):
+    def new_comment(self: "HDTicket", content: str, attachments: list[str] = []):
         if not is_agent():
             frappe.throw(
                 _("You are not permitted to add a comment"), frappe.PermissionError
@@ -561,7 +561,7 @@ class HDTicket(Document):
 
     @frappe.whitelist()
     def reply_via_agent(
-        self,
+        self: "HDTicket",
         message: str,
         to: str | None = None,
         cc: str | None = None,
@@ -680,7 +680,10 @@ class HDTicket(Document):
     @frappe.whitelist()
     # flake8: noqa
     def create_communication_via_contact(
-        self, message: str, attachments: list[dict] = [], new_ticket: bool = False
+        self: "HDTicket",
+        message: str,
+        attachments: list[dict] = [],
+        new_ticket: bool = False,
     ):
         if not new_ticket and frappe.db.get_single_value(
             "HD Settings", "enable_reply_email_to_agent"
@@ -805,7 +808,7 @@ class HDTicket(Document):
             )
 
     @frappe.whitelist()
-    def mark_seen(self):
+    def mark_seen(self: "HDTicket"):
         self.add_viewed(
             unique_views=True, force=True
         )  # Document class method, no way to add unique_views via document settings, hence used force and unique_views=True
