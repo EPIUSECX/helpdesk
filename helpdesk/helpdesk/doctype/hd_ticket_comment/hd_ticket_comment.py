@@ -34,6 +34,11 @@ class HDTicketComment(HasMentions, Document):
             room=room,
             data=data,
         )
+        # Broadcast to global room so the ticket list page can refresh
+        publish_event("helpdesk:ticket-list-update", data=data)
+        # Touch the parent ticket's modified timestamp and reset seen list so
+        # agents are notified of new activity, matching behaviour for customer replies.
+        frappe.db.set_value("HD Ticket", self.reference_ticket, "_seen", "[]")
         capture_event(telemetry_event)
         self.notify_mentions()
 
@@ -44,6 +49,11 @@ class HDTicketComment(HasMentions, Document):
 
         room = get_doc_room("HD Ticket", self.reference_ticket)
         publish_event(event, room=room, data=data)
+        # Broadcast to global room so the ticket list page can refresh
+        publish_event("helpdesk:ticket-list-update", data=data)
+        # Touch the parent ticket's modified timestamp and reset seen list so
+        # agents are notified of the deletion.
+        frappe.db.set_value("HD Ticket", self.reference_ticket, "_seen", "[]")
         capture_event(telemetry_event)
 
 
