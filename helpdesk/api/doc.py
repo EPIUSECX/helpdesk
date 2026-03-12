@@ -105,6 +105,10 @@ def get_list_data(
     rows.append("name") if "name" not in rows else rows
     if doctype == "HD Ticket":
         rows.append("_seen") if "_seen" not in rows else rows
+        if "last_customer_response" not in rows:
+            rows.append("last_customer_response")
+        if "last_agent_response" not in rows:
+            rows.append("last_agent_response")
     data = (
         frappe.get_list(
             doctype,
@@ -388,6 +392,11 @@ def sort_options(doctype: str, show_customer_portal_fields: bool = False):
     ]
 
     fields.extend(standard_fields)
+
+    # Expose the denormalized priority rank so agents can build compound sorts such as
+    # "Priority (Urgency) asc, Last Modified desc" without alphabetic name ordering.
+    if doctype == "HD Ticket":
+        fields.append({"label": "Priority (Urgency)", "value": "priority_order"})
 
     return fields
 

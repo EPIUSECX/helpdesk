@@ -13,6 +13,7 @@
   "raised_by",
   "status",
   "priority",
+  "priority_order",
   "status_category",
   "cb00",
   "ticket_type",
@@ -113,6 +114,15 @@
    "in_list_view": 1,
    "label": "Priority",
    "options": "HD Ticket Priority"
+  },
+  {
+   "description": "Numeric sort key mirroring HD Ticket Priority.integer_value (lower = higher urgency). Set automatically on save.",
+   "fieldname": "priority_order",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Priority Order",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "fieldname": "cb00",

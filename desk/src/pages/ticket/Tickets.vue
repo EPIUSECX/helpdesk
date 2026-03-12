@@ -75,6 +75,8 @@ import { __ } from "@/translation";
 import { View } from "@/types";
 import { getIcon, isCustomerPortal } from "@/utils";
 import { Badge, FeatherIcon, toast, Tooltip, usePageMeta } from "frappe-ui";
+import LucideHeadphones from "~icons/lucide/headphones";
+import LucideUser from "~icons/lucide/user";
 import { computed, h, onMounted, onUnmounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -118,12 +120,14 @@ const options = {
       custom: ({ row, item }) => {
         const seenBy = row._seen ? JSON.parse(row._seen) : [];
         const isSeen = seenBy.includes(userId || "");
-        return h(
-          "span",
-          {
-            class: ["truncate flex-1", !isSeen && "font-semibold"],
-          },
-          item
+        return h(Tooltip, { text: item }, () =>
+          h(
+            "span",
+            {
+              class: ["truncate flex-1", !isSeen && "font-semibold"],
+            },
+            item
+          )
         );
       },
     },
@@ -158,6 +162,35 @@ const options = {
     resolution_by: {
       custom: ({ row, item }) => handle_resolution_by_field(row, item),
     },
+    last_customer_response: {
+      custom: ({ row }) => {
+        const customerTs = row.last_customer_response
+          ? new Date(row.last_customer_response).getTime()
+          : 0;
+        const agentTs = row.last_agent_response
+          ? new Date(row.last_agent_response).getTime()
+          : 0;
+        if (!customerTs && !agentTs) return null;
+        const isCustomerLast = customerTs >= agentTs;
+        const lastTs = isCustomerLast
+          ? row.last_customer_response
+          : row.last_agent_response;
+        return h("div", { class: "flex items-center gap-1.5" }, [
+          h(isCustomerLast ? LucideUser : LucideHeadphones, {
+            class: "h-3.5 w-3.5 text-ink-gray-6 shrink-0",
+          }),
+          h(
+            "span",
+            { class: "truncate text-ink-gray-9" },
+            isCustomerLast ? __("Customer") : __("Agent")
+          ),
+          h("span", { class: "text-ink-gray-4" }, "·"),
+          h(Tooltip, { text: dayjs(lastTs).long() }, () =>
+            h("span", { class: "text-ink-gray-6" }, dayjs.tz(lastTs).fromNow())
+          ),
+        ]);
+      },
+    },
   },
   isCustomerPortal: isCustomerPortal.value,
   selectable: true,
@@ -175,6 +208,37 @@ const options = {
   },
   hideColumnSetting: false,
 };
+
+// Returns a small urgency dot VNode when the SLA deadline is approaching but
+// not yet breached. Critical (<15 min) gets a pulsing dot; warning (<1 hr)
+// gets a static dot. Returns null when no indicator is needed.
+function getSlaUrgencyDot(deadlineStr: string) {
+  const minutesLeft = dayjs(deadlineStr).diff(dayjs(), "minute");
+  if (minutesLeft <= 0) return null;
+  if (minutesLeft <= 15) {
+    return h(
+      "span",
+      {
+        class: "animate-pulse text-ink-gray-9 text-xs leading-none shrink-0",
+        title: __("SLA breach imminent"),
+        "aria-label": __("SLA breach imminent"),
+      },
+      "●"
+    );
+  }
+  if (minutesLeft <= 60) {
+    return h(
+      "span",
+      {
+        class: "text-ink-gray-6 text-xs leading-none shrink-0",
+        title: __("SLA breach approaching"),
+        "aria-label": __("SLA breach approaching"),
+      },
+      "●"
+    );
+  }
+  return null;
+}
 
 function handle_response_by_field(row: any, item: string) {
   if (!row.first_responded_on && dayjs(item).isBefore(new Date())) {
@@ -197,12 +261,16 @@ function handle_response_by_field(row: any, item: string) {
       variant: "outline",
     });
   } else {
+    const dot = getSlaUrgencyDot(item);
     return h(
-      Tooltip,
-      {
-        text: dayjs(item).long(),
-      },
-      () => dayjs.tz(item).fromNow()
+      "div",
+      { class: "flex items-center gap-1" },
+      [
+        dot,
+        h(Tooltip, { text: dayjs(item).long() }, () =>
+          dayjs.tz(item).fromNow()
+        ),
+      ].filter(Boolean)
     );
   }
 }
@@ -228,12 +296,16 @@ function handle_resolution_by_field(row: any, item: string) {
       variant: "outline",
     });
   } else {
+    const dot = getSlaUrgencyDot(item);
     return h(
-      Tooltip,
-      {
-        text: dayjs(item).long(),
-      },
-      () => dayjs.tz(item).fromNow()
+      "div",
+      { class: "flex items-center gap-1" },
+      [
+        dot,
+        h(Tooltip, { text: dayjs(item).long() }, () =>
+          dayjs.tz(item).fromNow()
+        ),
+      ].filter(Boolean)
     );
   }
 }
@@ -573,12 +645,16 @@ onMounted(() => {
     $socket.on("helpdesk:new-ticket", () => {
       listViewRef.value?.reload();
     });
+    $socket.on("helpdesk:ticket-list-update", () => {
+      listViewRef.value?.reload();
+    });
   }
 });
 
 onUnmounted(() => {
   if (!isCustomerPortal.value) {
     $socket.off("helpdesk:new-ticket");
+    $socket.off("helpdesk:ticket-list-update");
   }
 });
 

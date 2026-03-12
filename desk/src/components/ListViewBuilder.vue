@@ -152,6 +152,7 @@ import {
   ListView,
   LoadingIndicator,
   toast,
+  Tooltip,
 } from "frappe-ui";
 import {
   computed,
@@ -280,7 +281,7 @@ const defaultEmptyState = {
 
 const pageLengthCount = useStorage(
   `list_page_length_count+${props.options.doctype}`,
-  options.value.default_page_length
+  options.value.default_page_length,
 );
 
 const defaultParams = reactive({
@@ -340,8 +341,8 @@ function selectBannerOptions(selections: Set<string>, unselectAll = () => {}) {
     .filter(
       (action) =>
         !userActions.some(
-          (defaultAction) => defaultAction.label === action.label
-        )
+          (defaultAction) => defaultAction.label === action.label,
+        ),
     )
     .map((action) => ({
       ...action,
@@ -371,7 +372,7 @@ function getGroupedByRows(listRows, groupByField) {
       filteredRows = listRows.filter((row) => !row[groupByField.name]);
     } else {
       filteredRows = listRows.filter(
-        (row) => row[groupByField.name] == option.value
+        (row) => row[groupByField.name] == option.value,
       );
     }
 
@@ -455,18 +456,23 @@ function listCell(column: any, row: any, item: any, idx: number) {
     return columnConfig[column.key]?.custom({ column, row, item, idx });
   }
   if (idx === 0) {
-    return h("span", {
-      class: "truncate text-base text-ink-gray-6",
-      textContent: item,
-    });
+    return h(Tooltip, { text: item }, () =>
+      h("span", {
+        class: "truncate text-base text-ink-gray-6",
+        textContent: item,
+      }),
+    );
   }
   if (column.type === "Datetime") {
-    return h("span", {
-      class: "text-p-xs",
-      textContent: formatTimeShort(item),
-    });
+    return h(Tooltip, { text: item }, () =>
+      h("span", {
+        class: "text-p-xs",
+        textContent: formatTimeShort(item),
+      }),
+    );
   }
   if (column.type === "MultipleAvatar") {
+    // MultipleAvatar already renders its own per-avatar Tooltip
     return h(MultipleAvatar, {
       avatars: item,
       hideName: true,
@@ -474,15 +480,18 @@ function listCell(column: any, row: any, item: any, idx: number) {
     });
   }
   if (column.type === "Rating") {
+    // StarRating is a visual component; no text tooltip needed
     return h(StarRating, {
       rating: item || 0,
       class: "truncate",
     });
   }
-  return h("span", {
-    class: "truncate flex-1",
-    textContent: item,
-  });
+  return h(Tooltip, { text: item }, () =>
+    h("span", {
+      class: "truncate flex-1",
+      textContent: item,
+    }),
+  );
 }
 
 function handleFieldClick(e: MouseEvent, column, row, item) {
@@ -671,12 +680,12 @@ watch(
       headerView.value.label = __("List");
       headerView.value.icon = LucideAlignJustify;
     }
-  }
+  },
 );
 
 const listScrollPosition = useStorage(
   `list_position+${props.options.doctype}`,
-  0
+  0,
 );
 function handleListScroll(e) {
   listScrollPosition.value = e.target.scrollTop;

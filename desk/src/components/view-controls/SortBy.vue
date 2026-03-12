@@ -38,16 +38,13 @@
           class="rounded-r-none border-r"
           @click.stop="
             () => {
-              Array.from(sortValues)[0].direction =
-                Array.from(sortValues)[0].direction == 'asc' ? 'desc' : 'asc';
+              sortItems[0].direction =
+                sortItems[0].direction == 'asc' ? 'desc' : 'asc';
               apply();
             }
           "
         >
-          <AscendingIcon
-            v-if="Array.from(sortValues)[0].direction == 'asc'"
-            class="h-4"
-          />
+          <AscendingIcon v-if="sortItems[0].direction == 'asc'" class="h-4" />
           <DescendingIcon v-else class="h-4" />
         </Button>
         <Button
@@ -75,7 +72,7 @@
             class="mb-3 flex flex-col gap-2"
           >
             <div
-              v-for="(sort, i) in sortValues"
+              v-for="(sort, i) in sortItems"
               :key="sort.fieldname"
               class="flex items-center gap-1"
             >
@@ -166,7 +163,7 @@
 </template>
 
 <script setup>
-import { computed, inject } from "vue";
+import { computed, inject, nextTick, ref, watch } from "vue";
 import { NestedPopover } from "frappe-ui";
 import { useSortable } from "@vueuse/integrations/useSortable";
 import Autocomplete from "@/components/frappe-ui/Autocomplete.vue";
@@ -190,89 +187,133 @@ const listViewData = inject("listViewData");
 const listViewActions = inject("listViewActions");
 const { list, sortableFields: sortOptions } = listViewData;
 
-const sortValues = computed({
-  get: () => {
-    if (!list) return new Set();
-    let allSortValues = list.params?.order_by;
-    if (!allSortValues || !sortOptions.data) return new Set();
-    // if (allSortValues.trim() === "modified desc") return new Set();
+// Parse an order_by string into an array of { fieldname, direction } objects.
+function parseOrderBy(orderBy) {
+  if (!orderBy || !sortOptions.data) return [];
+  return orderBy.split(", ").map((sortValue) => {
+    const [fieldname, direction] = sortValue.split(" ");
+    return { fieldname, direction };
+  });
+}
 
-    allSortValues = allSortValues.split(", ").map((sortValue) => {
-      const [fieldname, direction] = sortValue.split(" ");
-      return { fieldname, direction };
-    });
-    // allSortValues = removeDuplicateSorts();
-    return new Set(allSortValues);
-  },
-  set: (value) => {
-    list.params.order_by = convertToString(value);
-  },
-});
+// Serialise sortItems to the same format as order_by for equality checks.
+function serialise(items) {
+  return items.map((f) => `${f.fieldname} ${f.direction}`).join(", ");
+}
 
+// Reactive array — single source of truth for the current sort state.
+// useSortable mutates this array in-place on drag-end (via moveArrayElement),
+// so apply() always reads the post-drag order.
+const sortItems = ref(parseOrderBy(list?.params?.order_by));
+
+// Guard flag: when true the order_by watch skips re-parsing because the
+// change originated from apply() and sortItems already holds the correct
+// post-action state.  Cleared on the next tick after the reactive flush.
+let _selfUpdate = false;
+
+// Sync sortItems when order_by changes externally (view switch, reload).
+// Skip when the parsed result is identical to the current state — this
+// prevents useSortable's array reference from being replaced after
+// onSuccess reassigns list.params, which would break drag-reorder and
+// cause direction toggles to require two clicks.
+watch(
+  () => list?.params?.order_by,
+  (orderBy) => {
+    if (_selfUpdate) return;
+    const parsed = parseOrderBy(orderBy);
+    if (serialise(parsed) === serialise(sortItems.value)) return;
+    sortItems.value = parsed;
+    nextTick(restartSort);
+  },
+);
+
+// Parse the initial order_by once the field list arrives (it may load after
+// the component mounts).
+watch(
+  () => sortOptions.data,
+  () => {
+    if (_selfUpdate) return;
+    const parsed = parseOrderBy(list?.params?.order_by);
+    if (serialise(parsed) === serialise(sortItems.value)) return;
+    sortItems.value = parsed;
+    nextTick(restartSort);
+  },
+);
+
+// Thin shim so the template's sortValues.size checks continue to work.
+const sortValues = computed(() => ({
+  size: sortItems.value.length,
+}));
+
+// Pure computed — no side effects. restartSort() is called explicitly where
+// needed (setSort) so Sortable picks up newly added DOM nodes.
 const options = computed(() => {
   if (!sortOptions.data) return [];
-  if (!sortValues.value.size) return sortOptions.data;
-  const selectedOptions = [...sortValues.value].map((sort) => sort.fieldname);
-  restartSort();
+  if (!sortItems.value.length) return sortOptions.data;
+  const selectedOptions = sortItems.value.map((sort) => sort.fieldname);
   return sortOptions.data.filter((option) => {
     return !selectedOptions.includes(option.value);
   });
 });
 
-const sortSortable = useSortable("#sort-list", sortValues, {
+// useSortable operates on the reactive array; its internal onEnd handler calls
+// moveArrayElement(sortItems.value, oldIndex, newIndex) before invoking the
+// user onEnd callback (via nextTick), so apply() always sees the post-drag order.
+const sortSortable = useSortable("#sort-list", sortItems, {
   handle: ".handle",
   animation: 200,
   onEnd: () => apply(),
 });
 
 function getSortLabel() {
-  if (!sortValues.value.size) return "Sort";
-  let values = Array.from(sortValues.value);
-  let label = sortOptions.data?.find(
-    (option) => option.value === values[0].fieldname
+  if (!sortItems.value.length) return "Sort";
+  const first = sortItems.value[0];
+  const label = sortOptions.data?.find(
+    (option) => option.value === first.fieldname,
   )?.label;
-
-  return label || sort.fieldname;
+  return label || first.fieldname;
 }
 
 function setSort(data) {
-  sortValues.value.add({ fieldname: data.value, direction: "asc" });
+  sortItems.value.push({ fieldname: data.value, direction: "asc" });
+  // Restart so Sortable picks up the newly rendered DOM node.
   restartSort();
   apply();
 }
 
 function updateSort(data, index) {
-  let oldSort = Array.from(sortValues.value)[index];
-  sortValues.value.delete(oldSort);
-  sortValues.value.add({
+  const old = sortItems.value[index];
+  sortItems.value.splice(index, 1, {
     fieldname: data.value,
-    direction: oldSort.direction,
+    direction: old.direction,
   });
   apply();
 }
 
 function removeSort(index) {
-  sortValues.value.delete(Array.from(sortValues.value)[index]);
+  sortItems.value.splice(index, 1);
   apply();
 }
 
 function clearSort(close) {
-  sortValues.value.clear();
+  sortItems.value = [];
   apply();
   close();
 }
 
 function apply() {
-  listViewActions.applySort(convertToString(sortValues.value));
+  const orderBy = convertToString(sortItems.value);
+  // Set the guard so the order_by watch does not overwrite sortItems.
+  _selfUpdate = true;
+  listViewActions.applySort(orderBy);
+  // Clear the guard after the reactive flush completes.
+  nextTick(() => {
+    _selfUpdate = false;
+  });
 }
 
 function convertToString(values) {
-  let _sortValues = "";
-  values.forEach((f) => {
-    _sortValues += `${f.fieldname} ${f.direction}, `;
-  });
-  _sortValues = _sortValues.slice(0, -2);
-  return _sortValues;
+  return values.map((f) => `${f.fieldname} ${f.direction}`).join(", ");
 }
 
 function restartSort() {

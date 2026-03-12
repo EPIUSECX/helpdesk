@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 import frappe
@@ -29,10 +30,52 @@ def after_install():
     create_ootb_ticket_types()
     create_welcome_ticket()
     create_ticket_feedback_options()
+    create_my_tickets_view()
     add_property_setters()
     add_website_settings_permission()
     # Always keep this at last, because sql_ddl makes the db commit
     add_fts_index()
+
+
+def create_my_tickets_view():
+    """Create a public 'My Tickets' view that filters tickets assigned to the current user.
+
+    The filter uses the literal value ``%@me%`` which is resolved to the
+    session user at query time by ``handle_at_me_support`` in ``helpdesk/api/doc.py``.
+    Storing it as a public view means every agent sees it in their sidebar
+    without having to create it manually.
+
+    Columns and rows mirror ``HDTicket.default_list_data()`` so the view
+    renders identically to the default "All Tickets" list — only the filter
+    differs.
+    """
+    if frappe.db.exists(
+        "HD View",
+        {"label": "My Tickets", "public": 1, "dt": "HD Ticket"},
+    ):
+        return
+
+    from helpdesk.helpdesk.doctype.hd_ticket.hd_ticket import HDTicket
+
+    default_data = HDTicket.default_list_data()
+
+    frappe.get_doc(
+        {
+            "doctype": "HD View",
+            "label": "My Tickets",
+            "icon": "user",
+            "type": "list",
+            "dt": "HD Ticket",
+            "public": 1,
+            "pinned": 0,
+            "is_default": 0,
+            "is_customer_portal": 0,
+            "filters": json.dumps({"_assign": ["like", "%@me%"]}),
+            "order_by": "modified desc",
+            "columns": json.dumps(default_data["columns"]),
+            "rows": json.dumps(default_data["rows"]),
+        }
+    ).insert(ignore_permissions=True)
 
 
 def add_default_categories_and_articles():
