@@ -58,6 +58,8 @@ def on_ticket_communication(doc, method):
         room=room,
         after_commit=True,
     )
+    # Broadcast to global room so the ticket list page can refresh
+    publish_event("helpdesk:ticket-list-update", data={"ticket_id": ticket_name})
 
 
 class HDTicket(Document):
@@ -82,6 +84,8 @@ class HDTicket(Document):
         publish_event(
             "helpdesk:ticket-update", room=room, data={"ticket_id": self.name}
         )
+        # Broadcast to global room so the ticket list page can refresh
+        publish_event("helpdesk:ticket-list-update", data={"ticket_id": self.name})
 
     def autoname(self):
         return self.name

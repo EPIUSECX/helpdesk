@@ -645,12 +645,16 @@ onMounted(() => {
     $socket.on("helpdesk:new-ticket", () => {
       listViewRef.value?.reload();
     });
+    $socket.on("helpdesk:ticket-list-update", () => {
+      listViewRef.value?.reload();
+    });
   }
 });
 
 onUnmounted(() => {
   if (!isCustomerPortal.value) {
     $socket.off("helpdesk:new-ticket");
+    $socket.off("helpdesk:ticket-list-update");
   }
 });
 
