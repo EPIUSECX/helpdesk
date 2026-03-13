@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from helpdesk.mixins.mentions import HasMentions
-from helpdesk.utils import capture_event, get_doc_room, publish_event
+from helpdesk.utils import capture_event, get_doc_room, is_agent, publish_event
 
 PRESET_EMOJIS = ["👍", "👎", "❤️", "🎉", "👀", "✅"]
 
@@ -39,6 +39,21 @@ class HDTicketComment(HasMentions, Document):
         # Touch the parent ticket's modified timestamp and reset seen list so
         # agents are notified of new activity, matching behaviour for customer replies.
         frappe.db.set_value("HD Ticket", self.reference_ticket, "_seen", "[]")
+        # Update last-reply timestamps so the ticket list "Last Reply" column
+        # reflects comments in addition to email communications.  The check is
+        # performed on commented_by so any future code path that creates an
+        # HD Ticket Comment (not just new_comment()) is covered automatically.
+        response_field = (
+            "last_agent_response"
+            if is_agent(self.commented_by)
+            else "last_customer_response"
+        )
+        frappe.db.set_value(
+            "HD Ticket",
+            self.reference_ticket,
+            response_field,
+            frappe.utils.now_datetime(),
+        )
         capture_event(telemetry_event)
         self.notify_mentions()
 
