@@ -1,6 +1,8 @@
 # Copyright (c) 2022, Frappe Technologies and contributors
 # For license information, please see license.txt
 
+import json
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -38,7 +40,14 @@ class HDTicketComment(HasMentions, Document):
         publish_event("helpdesk:ticket-list-update", data=data)
         # Touch the parent ticket's modified timestamp and reset seen list so
         # agents are notified of new activity, matching behaviour for customer replies.
-        frappe.db.set_value("HD Ticket", self.reference_ticket, "_seen", "[]")
+        # Keep the acting user as seen to match Frappe ORM behaviour on doc.save(),
+        # which automatically adds the saving user to _seen.
+        frappe.db.set_value(
+            "HD Ticket",
+            self.reference_ticket,
+            "_seen",
+            json.dumps([frappe.session.user]),
+        )
         # Update last-reply timestamps so the ticket list "Last Reply" column
         # reflects comments in addition to email communications.  The check is
         # performed on commented_by so any future code path that creates an
@@ -68,7 +77,14 @@ class HDTicketComment(HasMentions, Document):
         publish_event("helpdesk:ticket-list-update", data=data)
         # Touch the parent ticket's modified timestamp and reset seen list so
         # agents are notified of the deletion.
-        frappe.db.set_value("HD Ticket", self.reference_ticket, "_seen", "[]")
+        # Keep the acting user as seen to match Frappe ORM behaviour on doc.save(),
+        # which automatically adds the saving user to _seen.
+        frappe.db.set_value(
+            "HD Ticket",
+            self.reference_ticket,
+            "_seen",
+            json.dumps([frappe.session.user]),
+        )
         capture_event(telemetry_event)
 
 
