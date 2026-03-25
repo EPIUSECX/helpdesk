@@ -170,7 +170,12 @@ const options = {
         const agentTs = row.last_agent_response
           ? new Date(row.last_agent_response).getTime()
           : 0;
-        if (!customerTs && !agentTs) return null;
+        if (!customerTs && !agentTs)
+          return h(Badge, {
+            label: __("New"),
+            theme: "gray",
+            variant: "subtle",
+          });
         const isCustomerLast = customerTs >= agentTs;
         const lastTs = isCustomerLast
           ? row.last_customer_response

@@ -994,8 +994,21 @@ class HDTicket(Document):
                 self.status = self.ticket_reopen_status
             else:
                 self.status = self.default_open_status
-            # if received that means customer has replied
-            self.last_customer_response = frappe.utils.now_datetime()
+            # Only count this as a customer reply if it is not the initial ticket
+            # description. The first Communication on a ticket is always the description
+            # submitted at creation time (new_ticket=True in create_communication_via_contact).
+            # Counting all Communications for this ticket: if exactly one exists it must be
+            # the initial description, so skip updating last_customer_response to preserve
+            # the "New" state in the ticket list until a genuine reply arrives.
+            comm_count = frappe.db.count(
+                "Communication",
+                {
+                    "reference_doctype": "HD Ticket",
+                    "reference_name": self.name,
+                },
+            )
+            if comm_count > 1:
+                self.last_customer_response = frappe.utils.now_datetime()
         # If communication is outgoing, it must be a reply from agent
         if c.sent_or_received == "Sent":
             # Ignore system notifications
