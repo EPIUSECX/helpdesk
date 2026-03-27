@@ -60,6 +60,23 @@ def is_agent(user: str = None) -> bool:
     )
 
 
+def get_reply_classification(user: str) -> str:
+    """
+    Return 'agent' or 'customer' for a given user.
+
+    Checks helpdesk_reply_classification custom field first so that
+    system-level users (e.g. integration bots) can be explicitly
+    classified as customers without changing their roles or permissions.
+    Falls back to role/HD Agent detection when the field is not set.
+    """
+    classification = frappe.db.get_value("User", user, "helpdesk_reply_classification")
+    if classification == "Agent":
+        return "agent"
+    if classification == "Customer":
+        return "customer"
+    return "agent" if is_agent(user) else "customer"
+
+
 def publish_event(
     event: str,
     room: str | None = None,

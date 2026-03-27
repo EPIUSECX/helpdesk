@@ -8,7 +8,12 @@ from frappe import _
 from frappe.model.document import Document
 
 from helpdesk.mixins.mentions import HasMentions
-from helpdesk.utils import capture_event, get_doc_room, is_agent, publish_event
+from helpdesk.utils import (
+    capture_event,
+    get_doc_room,
+    get_reply_classification,
+    publish_event,
+)
 
 PRESET_EMOJIS = ["👍", "👎", "❤️", "🎉", "👀", "✅"]
 
@@ -54,7 +59,7 @@ class HDTicketComment(HasMentions, Document):
         # HD Ticket Comment (not just new_comment()) is covered automatically.
         response_field = (
             "last_agent_response"
-            if is_agent(self.commented_by)
+            if get_reply_classification(self.commented_by) == "agent"
             else "last_customer_response"
         )
         frappe.db.set_value(

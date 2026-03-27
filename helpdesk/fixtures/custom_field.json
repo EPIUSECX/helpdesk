@@ -1,0 +1,14 @@
+[
+  {
+    "doctype": "Custom Field",
+    "name": "User-helpdesk_reply_classification",
+    "dt": "User",
+    "fieldname": "helpdesk_reply_classification",
+    "label": "Reply Classification",
+    "fieldtype": "Select",
+    "options": "\nAgent\nCustomer",
+    "insert_after": "user_type",
+    "module": "Helpdesk",
+    "description": "Explicit override for Helpdesk Last Reply attribution. Leave blank to use role-based detection."
+  }
+]
