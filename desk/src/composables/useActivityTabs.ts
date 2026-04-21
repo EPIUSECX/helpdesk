@@ -42,13 +42,13 @@ export function useActivityTabsMobile(
 
   return computed(() => {
     const _tabs: TabObject[] = [
+      { name: "activity", label: __("Activity"), icon: ActivityIcon },
       {
         name: "details",
         label: __("Details"),
         icon: DetailsIcon,
         condition: () => isMobileView.value,
       },
-      { name: "activity", label: __("Activity"), icon: ActivityIcon },
       ...(skipEmailWorkflow.value
         ? []
         : [{ name: "email" as const, label: __("Emails"), icon: EmailIcon }]),
