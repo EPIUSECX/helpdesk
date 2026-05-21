@@ -27,6 +27,7 @@ after_migrate = [
     "helpdesk.search.download_corpus",
 ]
 
+
 # Full Text Search
 # ------------------
 
@@ -39,6 +40,9 @@ scheduler_events = {
     ],
     "daily": [
         "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.close_tickets_after_n_days"
+    ],
+    "hourly_long": [
+        "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.update_sla_status_in_ticket"
     ],
 }
 

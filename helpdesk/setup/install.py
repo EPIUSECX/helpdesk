@@ -6,6 +6,7 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.permissions import add_permission, update_permission_property
 
 from helpdesk.consts import DEFAULT_ARTICLE_CATEGORY
+from helpdesk.setup.default_views import add_default_views
 
 from .default_template import create_default_template
 from .file import create_helpdesk_folder
@@ -33,6 +34,7 @@ def after_install():
     create_my_tickets_view()
     add_property_setters()
     add_website_settings_permission()
+    add_default_views()
     # Always keep this at last, because sql_ddl makes the db commit
     add_fts_index()
 
@@ -213,7 +215,7 @@ def add_default_agent_groups():
         if not frappe.db.exists("HD Team", agent_group):
             agent_group_doc = frappe.new_doc("HD Team")
             agent_group_doc.team_name = agent_group
-            agent_group_doc.insert()
+            agent_group_doc.insert(ignore_mandatory=True)
 
 
 def update_agent_role_permissions():

@@ -1,25 +1,23 @@
 <template>
   <div
-    class="md:mx-10 md:my-4 flex items-center justify-between text-lg font-medium mx-6 mb-4 !mt-8"
+    class="md:mx-5 md:my-4 flex items-center justify-between text-lg font-medium mx-6 !mb-0 !my-3"
   >
-    <div class="flex h-8 items-center text-xl font-semibold text-gray-800">
+    <div class="flex h-8 items-center text-xl font-semibold text-ink-gray-8">
       {{ title }}
     </div>
-    <span v-if="!skipEmailWorkflow">
-      <Button
-        v-if="title == 'Emails'"
-        variant="solid"
-        @click="communicationAreaRef?.toggleEmailBox() ?? toggleEmailBox()"
-      >
-        <template #prefix>
-          <FeatherIcon name="plus" class="h-4 w-4" />
-        </template>
-        <span>{{ __("New Email") }}</span>
-      </Button>
-    </span>
+    <Button
+      v-if="title == 'Emails' && !skipEmailWorkflow"
+      variant="subtle"
+      @click="communicationAreaRef?.toggleEmailBox() ?? toggleEmailBox()"
+    >
+      <template #prefix>
+        <FeatherIcon name="plus" class="h-4 w-4" />
+      </template>
+      <span>{{ __("New Email") }}</span>
+    </Button>
     <Button
       v-else-if="title == 'Comments'"
-      variant="solid"
+      variant="subtle"
       @click="communicationAreaRef?.toggleCommentBox() ?? toggleCommentBox()"
     >
       <template #prefix>
@@ -27,9 +25,14 @@
       </template>
       <span>{{ __("New Comment") }}</span>
     </Button>
-    <Dropdown v-else-if="title == 'Calls'" :options="callActions" @click.stop>
+    <Dropdown
+      v-else-if="title == 'Calls'"
+      :options="callActions"
+      @click.stop
+      placement="right"
+    >
       <template v-slot="{ open }">
-        <Button variant="solid" class="flex items-center gap-1">
+        <Button variant="subtle" class="flex items-center gap-1">
           <template #prefix>
             <FeatherIcon name="plus" class="h-4 w-4" />
           </template>
@@ -43,9 +46,14 @@
         </Button>
       </template>
     </Dropdown>
-    <Dropdown v-else :options="defaultActions" @click.stop>
+    <Dropdown
+      v-else-if="title != 'Emails'"
+      :options="defaultActions"
+      @click.stop
+      placement="right"
+    >
       <template v-slot="{ open }">
-        <Button variant="solid" class="flex items-center gap-1">
+        <Button variant="subtle" class="flex items-center gap-1">
           <template #prefix>
             <FeatherIcon name="plus" class="h-4 w-4" />
           </template>
@@ -62,22 +70,28 @@
   </div>
   <CallLogModal
     v-model="showCallLogModal"
-    :ticketId="ticketId"
+    :ticketId="ticket.value?.doc?.name"
     @after-insert="refreshTicket"
   />
 </template>
 
 <script setup lang="ts">
-import { CommentIcon, EmailIcon, PhoneIcon } from "@/components/icons";
 import { useActivityHeaderActions } from "@/composables/useActivityHeaderActions";
 import { useSkipEmailWorkflow } from "@/composables/useSkipEmailWorkflow";
 import CallLogModal from "@/pages/call-logs/CallLogModal.vue";
 import { useTelephonyStore } from "@/stores/telephony";
 import { toggleCommentBox, toggleEmailBox } from "@/pages/ticket/modalStates";
+import { __ } from "@/translation";
+import { TicketSymbol } from "@/types";
 import { Dropdown } from "frappe-ui";
 import { storeToRefs } from "pinia";
-import { inject, ref, Ref } from "vue";
-import { __ } from "@/translation";
+import { inject, ref, type Ref } from "vue";
+
+type CommunicationAreaRef = {
+  toggleEmailBox: () => void;
+  toggleCommentBox: () => void;
+};
+
 defineProps({
   title: {
     type: String,
@@ -85,13 +99,16 @@ defineProps({
   },
 });
 
-const communicationAreaRef: Ref = inject("communicationArea");
+const communicationAreaRef = inject<Ref<CommunicationAreaRef | null>>(
+  "communicationArea",
+  ref(null)
+);
 const makeCall = inject<() => void>("makeCall");
 const refreshTicket = inject<() => void>("refreshTicket");
 const showCallLogModal = ref(false);
 const { isCallingEnabled } = storeToRefs(useTelephonyStore());
-const ticketId = inject<string>("ticketId");
 const { skipEmailWorkflow } = useSkipEmailWorkflow();
+const ticket = inject(TicketSymbol)!;
 const { defaultActions, callActions } = useActivityHeaderActions({
   communicationAreaRef,
   isCallingEnabled,

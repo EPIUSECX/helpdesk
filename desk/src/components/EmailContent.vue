@@ -7,7 +7,7 @@
 </template>
 
 <script setup lang="ts">
-import { getFontFamily } from "@/utils";
+import { dataTheme, getFontFamily, stripEmailColors } from "@/utils";
 import { computed, ref, watch } from "vue";
 
 const props = defineProps({
@@ -18,7 +18,7 @@ const props = defineProps({
 });
 
 const iframeRef = ref<HTMLIFrameElement | null>(null);
-const _content = ref(props.content);
+const _content = ref(stripEmailColors(props.content));
 
 // Get CSS path - in dev Vite serves it directly, in prod we need the built path
 const cssHref = computed(() => {
@@ -171,31 +171,7 @@ const htmlContent = computed(
       .email-content {
         word-break: break-word;
       }
-      .email-content :is(:where(table):not(:where([class~='not-prose'], [class~='not-prose'] *))) {
-        table-layout: auto;
-      }
-      .email-content :where(table):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
-        width: unset;
-        table-layout: auto;
-        text-align: unset;
-        margin-top: unset;
-        margin-bottom: unset;
-        font-size: unset;
-        line-height: unset;
-      }
-      .email-content :where(tbody tr):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
-        border-bottom-width: 0;
-        border-bottom-color: transparent;
-      }
-      .email-content :is(:where(td):not(:where([class~='not-prose'], [class~='not-prose'] *))) {
-        position: unset;
-        border-width: 0;
-        border-color: transparent;
-        padding: 0;
-      }
-      .email-content :where(tbody td):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
-        vertical-align: revert;
-      }
+
       .email-content :is(:where(img):not(:where([class~='not-prose'], [class~='not-prose'] *))) {
         border-width: 0;
       }
@@ -208,6 +184,7 @@ const htmlContent = computed(
       .email-content :where(blockquote p:last-of-type):not(:where([class~='not-prose'], [class~='not-prose'] *))::after {
         content: none;
       }
+
     </style>
   </head>
   <body>
@@ -226,13 +203,34 @@ watch(iframeRef, (iframe) => {
 
       const parent = emailContent.closest("html");
       if (!parent) return;
-      let theme = document.documentElement.getAttribute("data-theme");
-      parent.setAttribute("data-theme", theme);
+      parent.setAttribute("data-theme", dataTheme.value);
 
       const font = getFontFamily(_content.value);
       if (font) emailContent.classList.add(font);
 
       iframe.style.height = parent.offsetHeight + 1 + "px";
+
+      // Clicks inside the iframe don't bubble to the parent document, popovers/dropdowns that close on outside-click never fire.
+      iframe.contentDocument?.addEventListener("pointerdown", () => {
+        document.dispatchEvent(
+          new PointerEvent("pointerdown", { bubbles: true })
+        );
+      });
+
+      // This is to ensure that keyboard shortcuts work even when the iframe is focused. For example, pressing "r" to reply to an email should work even if the user has clicked inside the email content.
+      iframe.contentDocument?.addEventListener("keydown", (e) => {
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: e.key,
+            code: e.code,
+            ctrlKey: e.ctrlKey,
+            metaKey: e.metaKey,
+            shiftKey: e.shiftKey,
+            altKey: e.altKey,
+            bubbles: true,
+          })
+        );
+      });
 
       const replyCollapsers = emailContent.querySelectorAll(".replyCollapser");
       if (replyCollapsers.length) {
@@ -244,5 +242,10 @@ watch(iframeRef, (iframe) => {
       }
     };
   }
+});
+
+watch(dataTheme, (theme) => {
+  const html = iframeRef.value?.contentDocument?.documentElement;
+  if (html) html.setAttribute("data-theme", theme);
 });
 </script>

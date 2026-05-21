@@ -25,7 +25,7 @@
           </Tooltip>
         </span>
         <!-- <RouterLink
-          class="group cursor-pointer space-x-1 hover:text-gray-900"
+          class="group cursor-pointer space-x-1 hover:text-ink-gray-9"
           :to="{
             name: 'TicketsAgent',
           }"
