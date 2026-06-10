@@ -109,13 +109,23 @@ const showCallLogModal = ref(false);
 const { isCallingEnabled } = storeToRefs(useTelephonyStore());
 const { skipEmailWorkflow } = useSkipEmailWorkflow();
 const ticket = inject(TicketSymbol)!;
-const { defaultActions, callActions } = useActivityHeaderActions({
-  communicationAreaRef,
-  isCallingEnabled,
-  toggleEmailBox,
-  toggleCommentBox,
-  makeCall: makeCall ?? (() => {}),
-  showCallLogModal,
+
+const callActions = computed(() => {
+  let actions = [
+    {
+      icon: h(PhoneIcon, { class: "h-4 w-4" }),
+      label: __("Make a Call"),
+      onClick: () => makeCall(),
+    },
+    {
+      icon: "lucide-edit-3",
+      label: __("Log a Call"),
+      onClick: () => {
+        showCallLogModal.value = true;
+      },
+    },
+  ];
+  return actions;
 });
 </script>
 

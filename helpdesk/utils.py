@@ -60,21 +60,18 @@ def is_agent(user: str = None) -> bool:
     )
 
 
-def get_reply_classification(user: str) -> str:
+def get_agent_name(user: str = None) -> str | None:
     """
-    Return 'agent' or 'customer' for a given user.
+    Get the HD Agent name for `user`
 
-    Checks helpdesk_reply_classification custom field first so that
-    system-level users (e.g. integration bots) can be explicitly
-    classified as customers without changing their roles or permissions.
-    Falls back to role/HD Agent detection when the field is not set.
+    The HD Agent's name is the user (see HD Agent controller), so this
+    returns the user when an agent record exists, else None.
+
+    :param user: User to check against, defaults to current user
+    :return: HD Agent name, or None if `user` is not an agent
     """
-    classification = frappe.db.get_value("User", user, "helpdesk_reply_classification")
-    if classification == "Agent":
-        return "agent"
-    if classification == "Customer":
-        return "customer"
-    return "agent" if is_agent(user) else "customer"
+    user = user or frappe.session.user
+    return user if frappe.db.exists("HD Agent", user) else None
 
 
 def publish_event(

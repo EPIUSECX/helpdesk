@@ -127,6 +127,7 @@ import { useTheme } from "frappe-ui";
 import { useAuthStore } from "@/stores/auth";
 import { isCustomerPortal } from "@/utils";
 import Apps from "../Apps.vue";
+import AvailabilityMenuMobile from "../AvailabilityMenuMobile.vue";
 import {
   agentPortalSidebarOptions,
   customerPortalSidebarOptions,
@@ -207,7 +208,7 @@ const customerPortalDropdown = computed(() => [
   themeMenuItem.value,
   {
     label: "Log out",
-    icon: "log-out",
+    icon: "lucide-log-out",
     onClick: () => authStore.logout(),
   },
 ]);
@@ -216,28 +217,35 @@ const agentPortalDropdown = computed(() => [
   {
     component: markRaw(Apps),
   },
+  ...(authStore.hasAgentRecord
+    ? [
+        {
+          component: markRaw(AvailabilityMenuMobile),
+        },
+      ]
+    : []),
   {
     label: "Customer portal",
-    icon: "users",
+    icon: "lucide-users",
     onClick: () => {
       const path = router.resolve({ name: "TicketsCustomer" });
       window.open(path.href);
     },
   },
   {
-    icon: "life-buoy",
+    icon: "lucide-life-buoy",
     label: "Support",
     onClick: () => window.open("https://t.me/frappedesk"),
   },
   {
-    icon: "book-open",
+    icon: "lucide-book-open",
     label: "Docs",
     onClick: () => window.open("https://docs.frappe.io/helpdesk"),
   },
   themeMenuItem.value,
   {
     label: "Log out",
-    icon: "log-out",
+    icon: "lucide-log-out",
     onClick: () => authStore.logout(),
   },
 ]);

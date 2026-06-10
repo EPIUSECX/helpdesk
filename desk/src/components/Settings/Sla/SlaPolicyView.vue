@@ -28,7 +28,7 @@
     <template #content>
       <div
         v-if="slaData.loading"
-        class="flex items-center justify-center h-[stretch] absolute w-[stretch] left-0 top-5.5"
+        class="flex items-center justify-center absolute inset-x-0 top-5.5 bottom-0"
       >
         <LoadingIndicator class="w-4" />
       </div>
@@ -144,8 +144,8 @@
                 placeholder="11/01/2025"
                 class="w-full"
                 id="from_date"
-                @change="validateSlaData('start_date')"
-                :formatter="(date) => getFormattedDate(date)"
+                @update:model-value="validateSlaData('start_date')"
+                :format="getDateFormat()"
               >
                 <template #prefix>
                   <LucideCalendar class="size-4" />
@@ -161,8 +161,8 @@
                 placeholder="25/12/2025"
                 class="w-full"
                 id="to_date"
-                @change="validateSlaData('end_date')"
-                :formatter="(date) => getFormattedDate(date)"
+                @update:model-value="validateSlaData('end_date')"
+                :format="getDateFormat()"
               >
                 <template #prefix>
                   <LucideCalendar class="size-4" />
@@ -261,7 +261,7 @@ import {
   slaDataErrors,
   validateSlaData,
 } from "@/stores/sla";
-import { convertToConditions, getFormattedDate } from "@/utils";
+import { convertToConditions, getDateFormat } from "@/utils";
 import {
   Badge,
   Button,

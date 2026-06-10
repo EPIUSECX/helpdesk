@@ -61,6 +61,23 @@
               <ReplyAllIcon class="text-ink-gray-7" />
             </template>
           </Button>
+          <Dropdown
+            v-if="showSplitOption"
+            :placement="'right'"
+            :options="[
+              {
+                label: 'Split Ticket',
+                icon: LucideSplit,
+                onClick: () => (showSplitModal = true),
+              },
+            ]"
+          >
+            <Button
+              icon="lucide-more-horizontal"
+              class="!text-ink-gray-7"
+              variant="ghost"
+            />
+          </Dropdown>
         </div>
         <Dropdown
           v-if="showSplitOption"
