@@ -12,12 +12,28 @@
       </template>
       <template #right-header>
         <RouterLink
+          v-if="!isCustomerPortal"
+          class="inline-flex"
+          :to="{ name: 'TicketNewCustomer' }"
+        >
+          <Button
+            class="rtl:flex-row-reverse"
+            :label="__('Customer Ticket')"
+            theme="gray"
+            variant="subtle"
+          >
+            <template #prefix>
+              <LucideUserPlus class="h-4 w-4" />
+            </template>
+          </Button>
+        </RouterLink>
+        <RouterLink
           class="inline-flex"
           :to="{ name: isCustomerPortal ? 'TicketNew' : 'TicketAgentNew' }"
         >
           <Button
             class="rtl:flex-row-reverse"
-            label="Create"
+            :label="__('Create')"
             theme="gray"
             variant="solid"
           >
@@ -213,7 +229,7 @@ const options = computed(() => ({
           ),
           h("span", { class: "text-ink-gray-4" }, "·"),
           h(Tooltip, { text: dayjs(lastTs).long() }, () =>
-            h("span", { class: "text-ink-gray-6" }, dayjs.tz(lastTs).fromNow())
+            h("span", { class: "text-ink-gray-6" }, dayjs(lastTs).fromNow())
           ),
         ]);
       },
@@ -267,7 +283,6 @@ function handleResponseByField(row: any, item: string) {
       variant: "subtle",
     });
   } else {
-    const dot = getSlaUrgencyDot(item);
     return h(
       Tooltip,
       {

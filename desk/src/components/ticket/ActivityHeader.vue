@@ -85,7 +85,8 @@ import { __ } from "@/translation";
 import { TicketSymbol } from "@/types";
 import { Dropdown } from "frappe-ui";
 import { storeToRefs } from "pinia";
-import { inject, ref, type Ref } from "vue";
+import { computed, h, inject, ref, type Ref } from "vue";
+import { PhoneIcon } from "@/components/icons";
 
 type CommunicationAreaRef = {
   toggleEmailBox: () => void;
@@ -110,22 +111,13 @@ const { isCallingEnabled } = storeToRefs(useTelephonyStore());
 const { skipEmailWorkflow } = useSkipEmailWorkflow();
 const ticket = inject(TicketSymbol)!;
 
-const callActions = computed(() => {
-  let actions = [
-    {
-      icon: h(PhoneIcon, { class: "h-4 w-4" }),
-      label: __("Make a Call"),
-      onClick: () => makeCall(),
-    },
-    {
-      icon: "lucide-edit-3",
-      label: __("Log a Call"),
-      onClick: () => {
-        showCallLogModal.value = true;
-      },
-    },
-  ];
-  return actions;
+const { defaultActions, callActions } = useActivityHeaderActions({
+  communicationAreaRef,
+  isCallingEnabled,
+  toggleEmailBox,
+  toggleCommentBox,
+  makeCall: makeCall ?? (() => {}),
+  showCallLogModal,
 });
 </script>
 
