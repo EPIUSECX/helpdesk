@@ -70,6 +70,9 @@ doc_events = {
         "on_trash": "helpdesk.extends.assignment_rule.on_assignment_rule_trash",
         "validate": "helpdesk.extends.assignment_rule.on_assignment_rule_validate",
     },
+    "Communication": {
+        "on_update": "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.on_ticket_communication",
+    },
     "Customer": {
         "after_insert": "helpdesk.integrations.erpnext.customer.after_insert",
         "on_update": "helpdesk.integrations.erpnext.customer.on_update",
