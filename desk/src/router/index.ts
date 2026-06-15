@@ -37,11 +37,13 @@ const routes = [
     component: () => import("@/pages/ticket/Tickets.vue"),
   },
   {
-    path: "/tickets/:ticketId",
-    name: "TicketAgent",
-    component: () =>
-      import(`@/pages/ticket/${handleMobileView("TicketAgent")}.vue`),
-    props: true,
+    path: "/tickets/new-customer",
+    name: "TicketNewCustomer",
+    component: () => import("@/pages/ticket/TicketNewCustomer.vue"),
+    meta: {
+      onSuccessRoute: "TicketAgent",
+      parent: "TicketsAgent",
+    },
   },
   {
     path: "/tickets/new/:templateId?",
@@ -52,6 +54,13 @@ const routes = [
       onSuccessRoute: "TicketAgent",
       parent: "TicketsAgent",
     },
+  },
+  {
+    path: "/tickets/:ticketId",
+    name: "TicketAgent",
+    component: () =>
+      import(`@/pages/ticket/${handleMobileView("TicketAgent")}.vue`),
+    props: true,
   },
   {
     path: "/notifications",
