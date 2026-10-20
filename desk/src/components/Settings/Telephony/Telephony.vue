@@ -2,7 +2,7 @@
   <SettingsLayoutBase :description="__('Configure your telephony settings.')">
     <template #title>
       <div class="flex items-center gap-2">
-        <h1 class="text-lg font-semibold text-ink-gray-8">
+        <h1 class="text-md-semibold text-ink-gray-8">
           {{ __("Telephony") }}
         </h1>
         <UnsavedBadge
@@ -35,10 +35,10 @@
         <div class="flex-1 flex flex-col">
           <!-- General -->
           <div
-            class="flex items-center justify-between gap-8 py-3 hover:bg-surface-menu-bar rounded px-2"
+            class="flex items-center justify-between gap-8 py-3 hover:bg-surface-sidebar rounded-4 px-2"
           >
             <div class="flex flex-col">
-              <div class="text-p-base font-medium text-ink-gray-7 truncate">
+              <div class="text-p-base-medium text-ink-gray-7 truncate">
                 {{ __("Default medium") }}
               </div>
               <div class="text-p-sm text-ink-gray-5">
@@ -61,14 +61,14 @@
               />
             </div>
           </div>
-          <div class="h-px border-t mx-2 border-outline-gray-modals" />
+          <div class="h-px border-t mx-2 border-outline-elevation-2" />
 
           <div
-            class="flex items-center justify-between py-3 cursor-pointer rounded hover:bg-surface-menu-bar px-2"
+            class="flex items-center justify-between py-3 cursor-pointer rounded-4 hover:bg-surface-sidebar px-2"
             @click="emit('updateStep', 'twilio-settings')"
           >
             <div class="flex flex-col">
-              <div class="text-p-base font-medium text-ink-gray-7 truncate">
+              <div class="text-p-base-medium text-ink-gray-7 truncate">
                 {{ __("Twilio") }}
               </div>
               <div class="text-p-sm text-ink-gray-5 truncate">
@@ -79,20 +79,17 @@
                 }}
               </div>
             </div>
-            <FeatherIcon
-              name="chevron-right"
-              class="size-4 text-ink-gray-5 rtl:rotate-180"
-            />
+            <LucideChevronRight class="size-4 text-ink-gray-5 rtl:rotate-180" />
           </div>
 
-          <div class="h-px border-t mx-2 border-outline-gray-modals" />
+          <div class="h-px border-t mx-2 border-outline-elevation-2" />
 
           <div
-            class="flex items-center justify-between py-3 cursor-pointer rounded hover:bg-surface-menu-bar px-2"
+            class="flex items-center justify-between py-3 cursor-pointer rounded-4 hover:bg-surface-sidebar px-2"
             @click="emit('updateStep', 'exotel-settings')"
           >
             <div class="flex flex-col">
-              <div class="text-p-base font-medium text-ink-gray-7 truncate">
+              <div class="text-p-base-medium text-ink-gray-7 truncate">
                 {{ __("Exotel") }}
               </div>
               <div class="text-p-sm text-ink-gray-5 truncate">
@@ -103,19 +100,16 @@
                 }}
               </div>
             </div>
-            <FeatherIcon
-              name="chevron-right"
-              class="size-4 text-ink-gray-5 rtl:rotate-180"
-            />
+            <LucideChevronRight class="size-4 text-ink-gray-5 rtl:rotate-180" />
           </div>
         </div>
-        <ErrorMessage :message="error" />
       </div>
     </template>
   </SettingsLayoutBase>
 </template>
 
 <script setup lang="ts">
+import LucideChevronRight from "~icons/lucide/chevron-right";
 import Password from "@/components/Password.vue";
 import SettingsLayoutHeader from "../SettingsLayoutHeader.vue";
 import {
@@ -125,13 +119,11 @@ import {
   FormControl,
   createDocumentResource,
   toast,
-  ErrorMessage,
   createResource,
   Badge,
-  Autocomplete,
 } from "frappe-ui";
 import SelectDropdown from "@/components/SelectDropdown.vue";
-import { nextTick, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import { isDocDirty, validateExotel, validateTwilio } from "./utils";
 import { useAuthStore } from "@/stores/auth";
 import { useTelephonyStore } from "@/stores/telephony";
@@ -196,13 +188,6 @@ const telephonyAgent = createDocumentResource({
   },
 });
 
-const twilioAppsResource = createResource({
-  url: "telephony.twilio.api.fetch_applications",
-  onSuccess() {
-    twilio.reload();
-  },
-});
-
 const telephonyProviders = [
   { label: "Twilio", value: "Twilio" },
   { label: "Exotel", value: "Exotel" },
@@ -263,16 +248,6 @@ async function save() {
   // Reload twilio to prevent "doc has been modified" error, as an application is created and doc is updated on save
   await twilio.reload();
   telephonyStore.fetchCallIntegrationStatus();
-}
-
-function refreshApps(togglePopover) {
-  twilioAppsResource.submit().then(() => {
-    // Close and reopen popover to fix bug where search does not work after refreshing list
-    togglePopover();
-    nextTick(() => {
-      togglePopover();
-    });
-  });
 }
 
 createResource({

@@ -2,27 +2,30 @@
   <div class="flex items-center">
     <router-link
       :to="{ name: routeName }"
-      class="ps-0 pe-0.5 py-1 text-lg font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 text-ink-gray-5 hover:text-ink-gray-7 flex items-center justify-center"
+      class="ps-0 pe-0.5 py-1 text-lg-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 text-ink-gray-5 hover:text-ink-gray-7 flex items-center justify-center"
     >
       {{ isMobileView ? "..." : label }}
     </router-link>
-    <span class="mx-0.5 text-base text-ink-gray-4" aria-hidden="true"> / </span>
-    <Dropdown :options="options">
+    <span class="ml-0.5 text-base text-ink-gray-4" aria-hidden="true"> / </span>
+    <Dropdown v-model:open="isOpen" :options="options">
       <template #default="{ open }">
         <Button
           variant="ghost"
-          class="text-lg font-medium text-nowrap truncate max-w-[200px] sm:max-w-none"
-          :label="currentView.label"
+          class="max-w-[200px] sm:max-w-none !bg-transparent hover:!bg-surface-gray-3 focus-visible:!ring-0"
+          :class="open && '!bg-surface-gray-3'"
         >
+          <span class="text-lg-medium text-nowrap truncate">{{
+            currentView.label
+          }}</span>
           <template #prefix>
             <component
               :is="currentView.icon"
-              class="h-4 flex items-center justify-center"
+              class="flex size-4 shrink-0 items-center justify-center"
             />
           </template>
           <template #suffix>
-            <FeatherIcon
-              :name="open ? 'chevron-up' : 'chevron-down'"
+            <component
+              :is="open ? LucideChevronUp : LucideChevronDown"
               class="h-4 text-ink-gray-8"
             />
           </template>
@@ -54,16 +57,17 @@
           v-if="item.name"
           class="flex items-center justify-end gap-2 min-w-11"
         >
-          <FeatherIcon
+          <LucideCheck
             v-if="isCurrentView(item)"
-            name="check"
             class="size-4 text-ink-gray-7"
           />
-          <Dropdown align="end" :options="dropdownActions(item)">
+          <!-- -my-0.5: at its full height the button would make the row 4px
+               taller than the rows without one -->
+          <Dropdown side="right" align="start" :options="viewActions(item)">
             <template #default="{ open }">
               <Button
                 variant="ghost"
-                class="kebab-btn !size-4 ms-0 rounded-sm"
+                class="kebab-btn !-my-0.5 !size-5 ms-0 !rounded-2"
                 :class="open ? 'inline-flex' : 'hidden'"
                 icon="lucide-more-horizontal"
                 @click.stop
@@ -77,9 +81,13 @@
 </template>
 
 <script setup>
+import LucideChevronUp from "~icons/lucide/chevron-up";
+import LucideChevronDown from "~icons/lucide/chevron-down";
+import LucideCheck from "~icons/lucide/check";
 import Icon from "@/components/Icon.vue";
 import { useScreenSize } from "@/composables/screen";
-import { Badge, Dropdown, FeatherIcon } from "frappe-ui";
+import { Badge, Dropdown } from "frappe-ui";
+import { ref } from "vue";
 import { useRoute } from "vue-router";
 
 const props = defineProps({
@@ -107,6 +115,22 @@ const props = defineProps({
 
 const route = useRoute();
 const { isMobileView } = useScreenSize();
+const isOpen = ref(false);
+
+// Every kebab action opens a dialog, and popovers paint above dialogs, so this
+// menu has to close itself first or it covers what it just opened.
+const viewActions = (item) =>
+  props.dropdownActions(item).map((group) => ({
+    ...group,
+    options: group.options.map((option) => ({
+      ...option,
+      onClick: () => {
+        isOpen.value = false;
+        option.onClick?.();
+      },
+    })),
+  }));
+
 const isCurrentView = (item) => {
   if (!route.query.view) return false;
   return item.name === route.query.view;
@@ -114,9 +138,10 @@ const isCurrentView = (item) => {
 </script>
 
 <style>
+/* inline-flex, not block: the button centres its icon with flex */
 [data-slot="item"][data-highlighted] .kebab-btn,
 [data-slot="item"][data-state="checked"] .kebab-btn {
-  display: block;
+  display: inline-flex;
 }
 
 /* --fade-top / --fade-bottom + scroll-fade keyframes live in src/index.css */
@@ -124,20 +149,16 @@ const isCurrentView = (item) => {
   @apply sm:max-h-80 max-h-40 overflow-y-auto overscroll-contain;
   -webkit-mask-image: linear-gradient(
     to bottom,
-    black calc(100% - var(--fade-bottom)),
+    black calc(100%),
     transparent 100%
   );
-  mask-image: linear-gradient(
-    to bottom,
-    black calc(100% - var(--fade-bottom)),
-    transparent 100%
-  );
+  mask-image: linear-gradient(to bottom, black calc(100%), transparent 100%);
   animation: scroll-fade linear both;
   animation-timeline: scroll(self);
 }
 
 /* keep the group label pinned while its items scroll */
 [data-slot="group"]:has(.kebab-btn) [data-slot="group-label"] {
-  @apply sticky -top-[6px] z-10 bg-surface-modal;
+  @apply sticky -top-[6px] z-10 bg-surface-elevation-2;
 }
 </style>

@@ -14,12 +14,7 @@
           <LucideSearch class="size-4 text-ink-gray-5" />
         </template>
         <template #suffix>
-          <kbd
-            v-if="showShortcutHint && !query"
-            class="flex h-5 w-5 items-center justify-center rounded-[5px] border border-outline-gray-2 bg-surface-white pt-px text-xs text-ink-gray-5"
-          >
-            F
-          </kbd>
+          <ShortcutKey v-if="showShortcutHint && !query" keys="F" />
         </template>
       </TextInput>
     </div>
@@ -36,7 +31,7 @@
         role="option"
         :aria-selected="index === activeIndex"
         :class="[
-          'flex h-8 w-full items-center gap-2 rounded px-2 text-base text-ink-gray-8',
+          'flex h-8 w-full items-center gap-2 rounded-4 px-2 text-base text-ink-gray-8',
           index === activeIndex ? 'bg-surface-gray-2' : '',
         ]"
         @mousemove="activeIndex = index"
@@ -59,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import ShortcutKey from "@/components/ShortcutKey.vue";
 import { __ } from "@/translation";
 import { TextInput } from "frappe-ui";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
@@ -126,6 +122,6 @@ watch(activeIndex, (index) => {
 onMounted(() => {
   // preventScroll: the panel mounts mid-swipe, still translated; a default
   // focus would scroll it into view and visually cancel the slide
-  nextTick(() => searchInput.value?.el?.focus({ preventScroll: true }));
+  nextTick(() => searchInput.value?.focus({ preventScroll: true }));
 });
 </script>

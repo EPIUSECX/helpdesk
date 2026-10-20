@@ -3,16 +3,20 @@ from frappe import _
 from frappe.desk.form.assign_to import set_status
 from frappe.model import no_value_fields
 from frappe.model.document import get_controller
-from frappe.utils.caching import redis_cache
+from frappe.query_builder.functions import Date
 from pypika import Criterion
 
 from helpdesk.api.dashboard import COUNT_NAME
 from helpdesk.utils import (
+    agent_only,
     call_log_default_columns,
     check_permissions,
     contact_default_columns,
+    contact_default_rows,
     parse_call_logs,
 )
+
+SLA_ROW_FIELDS = ["sla", "status", "first_responded_on", "resolution_date"]
 
 
 @frappe.whitelist()
@@ -41,9 +45,6 @@ def get_list_data(
     group_by_field = view.get("group_by_field") if view else None
     label_doc = view.get("label_doc") if view else None
     label_field = view.get("label_field") if view else None
-
-    handle_at_me_support(filters)
-    handle_assigned_on_filter(filters, doctype)
 
     _list = get_controller(doctype)
     default_rows = []
@@ -76,6 +77,7 @@ def get_list_data(
         if not default_view:
             if doctype == "Contact":
                 columns = contact_default_columns
+                rows = contact_default_rows
             elif doctype == "TP Call Log":
                 columns = call_log_default_columns
             elif hasattr(_list, "default_list_data"):
@@ -97,6 +99,9 @@ def get_list_data(
                     else:
                         filters.append([key, "=", value])
 
+    handle_at_me_support(filters)
+    handle_assigned_on_filter(filters, doctype)
+
     if rows is None:
         rows = []
 
@@ -115,6 +120,9 @@ def get_list_data(
             rows.append("last_customer_response")
         if "last_agent_response" not in rows:
             rows.append("last_agent_response")
+        # the SLA columns can't tell fulfilled from due without these, and no saved view lists them
+        for field in SLA_ROW_FIELDS:
+            rows.append(field) if field not in rows else rows
     data = (
         frappe.get_list(
             doctype,
@@ -241,7 +249,6 @@ def get_list_data(
 
 
 @frappe.whitelist()
-@redis_cache()
 def get_filterable_fields(
     doctype: str,
     show_customer_portal_fields: bool = False,
@@ -276,6 +283,7 @@ def get_filterable_fields(
         "response_by",
         "resolution_by",
         "creation",
+        "customer",
     ]
 
     from_doc_fields = (
@@ -284,7 +292,6 @@ def get_filterable_fields(
             QBDocField.fieldname,
             QBDocField.fieldtype,
             QBDocField.label,
-            QBDocField.name,
             QBDocField.options,
         )
         .where(QBDocField.parent == doctype)
@@ -298,7 +305,6 @@ def get_filterable_fields(
             QBCustomField.fieldname,
             QBCustomField.fieldtype,
             QBCustomField.label,
-            QBCustomField.name,
             QBCustomField.options,
         )
         .where(QBCustomField.dt == doctype)
@@ -338,8 +344,15 @@ def get_filterable_fields(
                 "fieldname": "_assign",
                 "fieldtype": "Link",
                 "label": "Assigned to",
-                "name": "_assign",
                 "options": "HD Agent",
+            }
+        )
+        res.append(
+            {
+                "fieldname": "_user_tags",
+                "fieldtype": "Link",
+                "label": "Tags",
+                "options": "Tag",
             }
         )
 
@@ -370,7 +383,6 @@ def get_filterable_fields(
             "fieldname": "__assigned_on",
             "fieldtype": "Date",
             "label": "Assigned on",
-            "name": "__assigned_on",
         },
     ]
     for field in standard_fields:
@@ -475,10 +487,10 @@ def get_customer_portal_fields(doctype, fields):
     return fields
 
 
-def get_visible_custom_fields():
+def get_visible_custom_fields() -> list[str]:
     return frappe.db.get_all(
         "HD Ticket Template Field",
-        {"parent": "Default", "hide_from_customer": 0},
+        {"parent": "Default", "visible_to": "Everyone"},
         pluck="fieldname",
     )
 
@@ -510,7 +522,7 @@ def handle_default_view(doctype, _list, show_customer_portal_fields):
     if not columns:
         if doctype == "Contact":
             columns = contact_default_columns
-            rows = ["name", "email_id", "creation"]
+            rows = ["name", "email_id", "mobile_no", "image", "creation"]
         elif doctype == "TP Call Log":
             columns = call_log_default_columns
             rows = ["name", "caller", "receiver", "creation"]
@@ -541,12 +553,8 @@ def handle_at_me_support(filters):
 def _replace_at_me(container, key):
     value = container[key]
     if isinstance(value, list):
-        if "@me" in value:
-            value[value.index("@me")] = frappe.session.user
-        elif "%@me%" in value:
-            index = [i for i, v in enumerate(value) if v == "%@me%"]
-            for i in index:
-                value[i] = "%" + frappe.session.user + "%"
+        for index in range(len(value)):
+            _replace_at_me(value, index)
     elif value == "@me":
         container[key] = frappe.session.user
     elif value == "%@me%":
@@ -573,8 +581,8 @@ def handle_assigned_on_filter(filters, doctype):
         .where(ToDo.status == "Open")
     )
 
-    # Apply date filter based on operator
-    query = apply_datetime_filter(query, ToDo.creation, assigned_on_filter)
+    # "Assigned on" is a Date filter, so compare whole days
+    query = apply_datetime_filter(query, Date(ToDo.creation), assigned_on_filter)
 
     ticket_names = [row[0] for row in query.run()]
     # No matching tickets results in an impossible filter
@@ -668,6 +676,7 @@ def apply_datetime_filter(query, field, filter_value):
 
 
 @frappe.whitelist()
+@agent_only
 def remove_assignments(doctype: str, name: str, assignees: list[str]):
     assignees = frappe.parse_json(assignees)
 

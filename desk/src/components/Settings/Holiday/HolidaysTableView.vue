@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-md border px-2 border-outline-gray-2 text-sm">
+  <div class="rounded-5 border px-2 border-outline-gray-2 text-sm">
     <div
       class="grid p-2 px-4 items-center gap-2"
       :style="{
@@ -30,19 +30,19 @@
             :type="'text'"
             placeholder="Description"
             v-model="holiday[column.key]"
-            class="!bg-surface-white w-full text-base px-0 focus:!ring-0 border-none hover:bg-surface-white outline-none no-underline focus:!outline-none"
+            class="!bg-surface-base w-full text-base px-0 focus:!ring-0 border-none hover:bg-surface-base outline-none no-underline focus:!outline-none"
           />
           <div v-else>
             {{ dayjs(holiday[column.key]).format("DD MMM YYYY") }}
           </div>
         </div>
         <div class="flex justify-end">
-          <Dropdown placement="right" :options="dropdownOptions(holiday)">
-            <Button
-              icon="lucide-more-horizontal"
-              variant="ghost"
-              @click="isConfirmingDelete = false"
-            />
+          <Dropdown
+            align="end"
+            :options="dropdownOptions(holiday)"
+            @update:open="(open) => open && (isConfirmingDelete = false)"
+          >
+            <Button icon="lucide-more-horizontal" variant="ghost" />
           </Dropdown>
         </div>
       </div>

@@ -1,34 +1,39 @@
 <template>
   <Tabs
-    :modelValue="tabIndex"
-    :tabs="tabs"
+    :modelValue="activeTab"
     @update:modelValue="changeTabTo"
-    class="[&_[role='tab']]:px-0 [&_[role='tablist']]:px-5 [&_[role='tablist']]:gap-7.5 [&_[role='tablist']]:flex-shrink-0 [&_[role='tabpanel'][data-state='active']]:flex-1"
+    class="flex flex-1 flex-col overflow-hidden"
   >
-    <template #tab-panel="{ tab }">
-      <TicketAgentActivities
-        v-if="Boolean(activities.data)"
-        ref="ticketAgentActivitiesRef"
-        :activities="filterActivities(tab.name as TicketTab)"
-        :title="tab.label"
-        :ticket-status="ticket.doc.status"
-        @email:reply="
-          (e) => {
-            communicationAreaRef?.replyToEmail(e);
-          }
-        "
-        @update="
-          () => {
-            activities.reload();
-            ticketAgentActivitiesRef?.scrollToLatestActivity();
-          }
-        "
+    <!-- the row carries the underline so it runs beneath the actions too -->
+    <div
+      class="flex shrink-0 items-center gap-2 border-b border-outline-gray-1 px-5"
+    >
+      <TabList size="md" class="flex-1 !border-b-0 py-1.5">
+        <TabTrigger
+          v-for="tab in tabs"
+          :key="tab.value"
+          :value="tab.value"
+          :label="tab.label"
+          :icon-left="tab.iconLeft"
+        />
+      </TabList>
+      <TicketCallActions v-if="activeTab === 'call'" />
+    </div>
+    <TabPanel
+      v-for="tab in tabs"
+      :key="tab.value"
+      :value="tab.value"
+      class="min-h-0 flex-1 flex-col overflow-auto data-[state=active]:flex"
+    >
+      <TicketAnalyticsTab v-if="tab.value === 'analytics'" />
+      <TicketTimeline
+        v-else
+        :ticket-id="String(ticket.doc?.name)"
+        :tab="tab.value"
+        :tab-label="tab.label"
+        @email:reply="(e) => communicationAreaRef?.replyToEmail(e)"
       />
-      <!-- <div v-else class="flex items-center justify-center flex-col flex-1">
-        <Button :loading="true" variant="ghost" size="2xl" />
-        <p class="text-xl font-medium text-ink-gray-5">Loading...</p>
-      </div> -->
-    </template>
+    </TabPanel>
   </Tabs>
   <!-- Comm Area -->
   <CommunicationArea
@@ -38,192 +43,78 @@
     :cc-emails="[]"
     :bcc-emails="[]"
     :key="ticket.doc?.name"
-    @update="
-      () => {
-        activities.reload();
-        ticketAgentActivitiesRef?.scrollToLatestActivity();
-      }
-    "
+    @update="reloadTicketFeed(String(ticket.doc?.name))"
   />
 </template>
 
 <script setup lang="ts">
 import CommunicationArea from "@/components/CommunicationArea.vue";
-import { useActiveTabManager } from "@/composables/useActiveTabManager";
-import { useActivityTabs } from "@/composables/useActivityTabs";
-import { useTelephonyStore } from "@/stores/telephony";
 import {
-  ActivitiesSymbol,
-  FeedbackActivity,
-  TicketSymbol,
-  TicketTab,
-} from "@/types";
-import { Tabs } from "frappe-ui";
+  ActivityIcon,
+  CommentIcon,
+  EmailIcon,
+  PhoneIcon,
+} from "@/components/icons";
+import TicketAnalyticsTab from "@/components/ticket-agent/analytics/TicketAnalyticsTab.vue";
+import TicketCallActions from "@/components/ticket/TicketCallActions.vue";
+import { useActiveTabManager } from "@/composables/useActiveTabManager";
+import { useSkipEmailWorkflow } from "@/composables/useSkipEmailWorkflow";
+import { reloadTicketFeed } from "@/composables/useTicket";
+import { useTelephonyStore } from "@/stores/telephony";
+import { TabObject, TicketSymbol } from "@/types";
+import { TabList, TabPanel, TabTrigger, Tabs } from "frappe-ui";
 import { storeToRefs } from "pinia";
-import { computed, inject, provide, ref } from "vue";
-import { TicketAgentActivities } from "../ticket";
+import { computed, ComputedRef, inject, ref } from "vue";
+import LucideChartNoAxesColumn from "~icons/lucide/chart-no-axes-column";
+import TicketTimeline from "./timeline/TicketTimeline.vue";
 
 const ticket = inject(TicketSymbol)!;
-const activities = inject(ActivitiesSymbol)!;
 
-const ticketAgentActivitiesRef = ref<InstanceType<
-  typeof TicketAgentActivities
-> | null>(null);
 const communicationAreaRef = ref<InstanceType<typeof CommunicationArea> | null>(
   null
 );
 const telephonyStore = useTelephonyStore();
 const { isCallingEnabled } = storeToRefs(telephonyStore);
-const tabs = useActivityTabs(isCallingEnabled);
-const { tabIndex, changeTabTo } = useActiveTabManager(tabs);
-provide("communicationArea", communicationAreaRef);
+const { skipEmailWorkflow } = useSkipEmailWorkflow();
 
-// TODO: refactor for pagination
-// can be done once we sort out the backend
-// sender mail will be  user using portal
-const _activities = computed(() => {
-  if (!activities.value?.data) {
-    return [];
-  }
-  const emailProps = activities.value?.data?.communications.map(
-    (email, idx: number) => {
-      return {
-        subject: email.subject,
-        content: email.content,
-        sender: {
-          name: email.user.email,
-          full_name: email.user.name,
-        },
-        to: email.recipients,
-        type: "email",
-        key: email.creation,
-        cc: email.cc,
-        bcc: email.bcc,
-        creation: email.communication_date || email.creation,
-        attachments: email.attachments,
-        name: email.name,
-        deliveryStatus: email.delivery_status,
-        isFirstEmail: idx === 0,
-      };
-    }
-  );
-
-  const commentProps = activities.value.data.comments.map((comment) => {
-    return {
-      name: comment.name,
-      type: "comment",
-      key: comment.creation,
-      commentedBy: comment.commented_by,
-      commenter: comment.user.name,
-      creation: comment.creation,
-      content: comment.content,
-      attachments: comment.attachments,
-    };
-  });
-
-  activities.value.data.history.map((h) => {
-    // }
-    h.action;
-    h.owner;
-    // if h.actions includes h.owner, replace it with 'themselves'
-    if (h.action && h.owner && h.action.includes(h.owner)) {
-      h.action = h.action.replace(h.owner, "themselves");
-    }
-    return h;
-  });
-
-  const historyProps = [
-    ...activities.value.data.history,
-    ...activities.value.data.views,
-  ].map((h) => {
-    return {
-      type: "history",
-      key: h.creation,
-      content: h.action ? h.action : "viewed this",
-      creation: h.creation,
-      user: h.user.name + " ",
-    };
-  });
-
-  const callProps = activities.value.data.calls.map((call) => {
-    return {
-      ...call,
-      type: "call",
-      name: call.name,
-      key: call.creation,
-      call_type: call.type,
-      content: `${call.caller || "Unknown"} made a call to ${
-        call.receiver || "Unknown"
-      }`,
-      duration: call.duration ? call.duration + "s" : "0s",
-    };
-  });
-
-  const sorted = [
-    ...emailProps,
-    ...commentProps,
-    ...historyProps,
-    ...callProps,
-  ].sort((a, b) => new Date(a.creation) - new Date(b.creation));
-  const data = [];
-  let i = 0;
-
-  while (i < sorted.length) {
-    const currentActivity = sorted[i];
-
-    if (currentActivity.type === "history") {
-      currentActivity.relatedActivities = [currentActivity];
-      for (let j = i + 1; j < sorted.length + 1; j++) {
-        const nextActivity = sorted[j];
-
-        if (
-          nextActivity &&
-          nextActivity.user === currentActivity.user &&
-          nextActivity.content !== "viewed this" &&
-          !nextActivity.content.includes("assigned") &&
-          !nextActivity.content.includes("unassigned")
-        ) {
-          currentActivity.relatedActivities.push(nextActivity);
-        } else {
-          data.push(currentActivity);
-          i = j - 1;
-          break;
-        }
-      }
-    } else {
-      data.push(currentActivity);
-    }
-    i++;
-  }
-  // add feedback data at the last always
-  // name is email
-  // full_name is name
-
-  if (ticket.value.doc.feedback_rating === 0) {
-    return data;
-  }
-  let feedbackActivity: FeedbackActivity[] = [
+const tabs: ComputedRef<TabObject[]> = computed(() => {
+  const _tabs: TabObject[] = [
     {
-      type: "feedback",
-      key: "feedback-activity",
-      feedback_rating: ticket.value?.doc.feedback_rating,
-      feedback_extra: ticket.value?.doc.feedback_extra,
-      feedback: ticket.value?.doc.feedback,
-      sender: {
-        name: ticket.value?.doc.raised_by,
-        full_name: ticket.value?.doc.contact,
-      },
+      value: "activity",
+      label: "Activity",
+      iconLeft: ActivityIcon,
+    },
+    // EPIUSECX: workspaces that skip the email workflow have no Emails tab
+    ...(skipEmailWorkflow.value
+      ? []
+      : [
+          {
+            value: "email",
+            label: "Emails",
+            iconLeft: EmailIcon,
+          },
+        ]),
+    {
+      value: "comment",
+      label: "Comments",
+      iconLeft: CommentIcon,
     },
   ];
-  data.push(...feedbackActivity);
 
-  return data;
+  if (isCallingEnabled.value) {
+    _tabs.push({
+      value: "call",
+      label: "Calls",
+      iconLeft: PhoneIcon,
+    });
+  }
+  _tabs.push({
+    value: "analytics",
+    label: "Analytics",
+    iconLeft: LucideChartNoAxesColumn,
+  });
+  return _tabs;
 });
 
-function filterActivities(eventType: TicketTab) {
-  if (eventType === "activity") {
-    return _activities.value;
-  }
-  return _activities.value.filter((activity) => activity.type === eventType);
-}
+const { activeTab, changeTabTo } = useActiveTabManager(tabs);
 </script>

@@ -2,9 +2,7 @@
   <div class="flex flex-col gap-4 mt-6">
     <div class="flex flex-col gap-1">
       <slot name="title">
-        <span class="text-base font-medium text-ink-gray-8">{{
-          __("Theme")
-        }}</span>
+        <span class="text-base-medium text-ink-gray-8">{{ __("Theme") }}</span>
       </slot>
       <slot name="description">
         <span class="text-p-sm text-ink-gray-6">
@@ -18,11 +16,11 @@
           <div
             v-for="option in themeOptions"
             :key="option.value"
-            class="flex-1 rounded-lg border cursor-pointer min-h-[42px]"
+            class="flex-1 rounded-6 border cursor-pointer min-h-[42px]"
             :class="
               theme === option.value
-                ? 'border-outline-gray-5'
-                : 'border-outline-gray-modals'
+                ? 'border-outline-gray-7'
+                : 'border-outline-elevation-2'
             "
             @click="theme = option.value"
           >
@@ -49,7 +47,7 @@
                     class="flex items-start justify-between gap-2 p-2.5 pr-0 pb-1 min-h-[41px]"
                   >
                     <div
-                      class="flex items-center flex-1 gap-1 text-xs text-ink-gray-5 font-semibold"
+                      class="flex items-center flex-1 gap-1 text-xs-semibold text-ink-gray-5"
                     >
                       <img
                         v-if="logoIsImage"
@@ -59,7 +57,7 @@
                       <component
                         :is="logo"
                         v-else-if="logo"
-                        class="size-5 shrink-0 rounded"
+                        class="size-5 shrink-0 rounded-4"
                       />
                       <div>{{ __(name) }}</div>
                     </div>
@@ -88,7 +86,7 @@
                 class="rounded-full size-3.5"
                 :class="
                   theme === option.value
-                    ? 'border-4 border-outline-gray-5'
+                    ? 'border-4 border-outline-gray-7'
                     : 'border border-outline-gray-4'
                 "
               />
@@ -102,7 +100,7 @@
 
 <script setup lang="ts">
 import { __ } from "@/translation";
-import { useTheme, type Theme } from "frappe-ui";
+import { useColorScheme, type ColorScheme } from "frappe-ui";
 import { computed, type Component } from "vue";
 
 type Pane = {
@@ -114,7 +112,7 @@ type Pane = {
 const props = withDefaults(
   defineProps<{
     /** Controlled value. When omitted the global frappe-ui theme is used. */
-    modelValue?: Theme;
+    modelValue?: ColorScheme;
     /** Brand logo shown in the previews: image URL or component. */
     logo?: string | Component;
     /** Brand name shown in the previews. */
@@ -123,12 +121,12 @@ const props = withDefaults(
   { logo: "", name: "" }
 );
 
-const emit = defineEmits<{ "update:modelValue": [theme: Theme] }>();
+const emit = defineEmits<{ "update:modelValue": [theme: ColorScheme] }>();
 
-const { currentTheme, setTheme } = useTheme();
+const { colorScheme, setColorScheme } = useColorScheme();
 
 const themeOptions: {
-  value: Theme;
+  value: ColorScheme;
   label: string;
   panes: Pane[];
   bars: boolean;
@@ -141,7 +139,7 @@ const themeOptions: {
       {
         tone: "light",
         containerClass: "pl-5 pt-3.5 bg-surface-gray-2 rounded-t-[10.5px]",
-        screenClass: "bg-white rounded-tl-sm",
+        screenClass: "bg-white rounded-tl-1",
       },
     ],
   },
@@ -153,7 +151,7 @@ const themeOptions: {
       {
         tone: "dark",
         containerClass: "pl-5 pt-3.5 bg-surface-gray-2 rounded-t-[10.5px]",
-        screenClass: "bg-gray-900 rounded-tl-sm",
+        screenClass: "bg-gray-900 rounded-tl-1",
       },
     ],
   },
@@ -166,13 +164,13 @@ const themeOptions: {
         tone: "light",
         containerClass:
           "flex flex-1 pl-5 pt-3.5 bg-surface-gray-2 rounded-tl-[10.5px]",
-        screenClass: "bg-white rounded-tl-sm w-full",
+        screenClass: "bg-white rounded-tl-1 w-full",
       },
       {
         tone: "dark",
         containerClass:
           "flex flex-1 pl-5 pt-3.5 bg-surface-gray-3 rounded-tr-[10.5px]",
-        screenClass: "bg-gray-900 rounded-tl-sm w-full",
+        screenClass: "bg-gray-900 rounded-tl-1 w-full",
       },
     ],
   },
@@ -182,15 +180,15 @@ const logoIsImage = computed(
   () => typeof props.logo === "string" && props.logo.length > 0
 );
 
-const theme = computed<Theme>({
+const theme = computed<ColorScheme>({
   get() {
-    const value = props.modelValue ?? currentTheme.value;
+    const value = props.modelValue ?? colorScheme.value;
     if (value === "light") return "light";
     if (value === "dark") return "dark";
     return "system";
   },
   set(value) {
-    setTheme(value);
+    setColorScheme(value);
     emit("update:modelValue", value);
   },
 });

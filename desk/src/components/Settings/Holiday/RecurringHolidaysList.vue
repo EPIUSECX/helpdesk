@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-md border p-1 border-outline-gray-2 text-sm">
+  <div class="rounded-5 border p-1 border-outline-gray-2 text-sm">
     <div
       class="grid p-2 items-center"
       :style="{
@@ -32,12 +32,12 @@
           <div v-else>{{ holiday[column.key] }}</div>
         </div>
         <div class="flex justify-end">
-          <Dropdown placement="right" :options="dropdownOptions(holiday)">
-            <Button
-              icon="lucide-more-horizontal"
-              variant="ghost"
-              @click="isConfirmingDelete = false"
-            />
+          <Dropdown
+            align="end"
+            :options="dropdownOptions(holiday)"
+            @update:open="(open) => open && (isConfirmingDelete = false)"
+          >
+            <Button icon="lucide-more-horizontal" variant="ghost" />
           </Dropdown>
         </div>
       </div>

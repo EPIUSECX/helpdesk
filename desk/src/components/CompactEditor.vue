@@ -1,87 +1,73 @@
 <template>
   <div class="flex flex-col">
-    <TextEditor
+    <Editor
       ref="editorRef"
-      :editor-class="editorClass"
-      :bubble-menu="false"
-      :content="internalContent"
+      v-model="internalContent"
       :extensions="extensions"
       v-bind="uploadFn ? { uploadFunction: uploadFn } : {}"
       :placeholder="placeholder"
-      @change="(val: string) => (internalContent = val)"
     >
-      <template #top>
+      <template #default>
+        <EditorBubbleMenu :items="commentToolbar" />
         <div
-          class="flex items-center overflow-x-auto rounded-t border border-b-0 border-[--surface-gray-2] px-2 py-1"
+          class="flex items-center overflow-x-auto rounded-t-4 border border-b-0 border-outline-gray-1 bg-surface-gray-1 px-1 py-1"
         >
           <div
             v-if="showAttachments"
             class="inline-flex items-center gap-1.5 pe-1"
           >
-            <FileUploader
-              :upload-args="{ private: true }"
-              @success="addAttachment"
-            >
+            <FileUploader private @success="addAttachment">
               <template #default="{ openFileSelector, uploading }">
                 {{ syncUploadingState(uploading) }}
                 <button
-                  class="flex rounded p-1 text-ink-gray-8 transition-colors hover:bg-surface-gray-3 disabled:opacity-40"
+                  class="flex rounded-4 p-1 text-ink-gray-8 transition-colors hover:bg-surface-gray-3 disabled:opacity-40"
                   :disabled="uploading"
                   @click="openFileSelector()"
                 >
+                  <LoadingIndicator v-if="uploading" class="h-4 w-4" />
                   <AttachmentIcon
+                    v-else
                     class="h-4 w-4"
                     style="stroke-width: 1.5 !important"
                   />
                 </button>
               </template>
             </FileUploader>
-            <div class="h-4 w-[2px] border-s" />
+            <div class="h-4 w-[2px] border-s ml-1" />
           </div>
-          <TextEditorFixedMenu :buttons="(menuButtons as any)" />
+          <EditorFixedMenu :items="fullToolbar" />
+          <EditorTableMenu />
         </div>
+        <EditorContent :class="editorClass" />
       </template>
-    </TextEditor>
-    <div
+    </Editor>
+    <AttachmentList
       v-if="showAttachments && attachments?.length"
-      class="flex flex-wrap gap-2 mt-2"
-    >
-      <AttachmentItem
-        v-for="attachment in attachments ?? []"
-        :key="attachment.file_url"
-        :label="attachment.file_name"
-        :url="attachment.file_url"
-      >
-        <template #suffix>
-          <FeatherIcon
-            class="h-3.5 cursor-pointer"
-            name="x"
-            @click.self.stop="removeAttachment(attachment)"
-          />
-        </template>
-      </AttachmentItem>
-    </div>
+      class="mt-2"
+      :attachments="attachments ?? []"
+      @remove="removeAttachment"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { AttachmentItem } from "@/components";
+import { AttachmentList } from "@/components";
+import {
+  buildEditorExtensions,
+  commentToolbar,
+  fullToolbar,
+} from "@/components/editor/config";
 import { AttachmentIcon } from "@/components/icons";
-import { menuButtons } from "@/components/Settings/SavedReplies/savedReplies";
 import { getUserEmailInfo } from "@/composables/useUserEmailInfo";
-import {
-  CleanStyles,
-  ComponentUtils,
-  HandleExcelPaste,
-} from "@/tiptap-extensions";
 import { isContentEmpty } from "@/utils";
+import { FileUploader, LoadingIndicator, type UploadedFile } from "frappe-ui";
 import {
-  FeatherIcon,
-  FileUploader,
-  TextEditor,
-  TextEditorFixedMenu,
-  type UploadedFile,
-} from "frappe-ui";
+  Editor,
+  EditorBubbleMenu,
+  EditorContent,
+  EditorFixedMenu,
+  EditorTableMenu,
+} from "frappe-ui/editor";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 type UploadFunction = (file: File) => Promise<UploadedFile>;
@@ -93,7 +79,6 @@ const props = withDefaults(
     maxHeight?: string;
     extensions?: any[];
     showSignature?: boolean;
-    type?: "Saved Reply" | "Email";
     showAttachments?: boolean;
     uploadFn?: UploadFunction;
   }>(),
@@ -101,9 +86,8 @@ const props = withDefaults(
     placeholder: "",
     minHeight: "min-h-[180px]",
     maxHeight: "max-h-80",
-    extensions: () => [ComponentUtils, HandleExcelPaste, CleanStyles],
+    extensions: () => [],
     showSignature: false,
-    type: "Saved Reply",
     showAttachments: false,
   }
 );
@@ -116,25 +100,16 @@ const attachments = defineModel<UploadedFile[] | null>("attachments", {
 });
 const isUploading = ref(false);
 
-const savedReplyClass = [
-  "!prose-sm max-w-full overflow-auto py-1.5 px-2",
-  "rounded-b border border-[--surface-gray-2] bg-surface-gray-2",
-  "placeholder-ink-gray-4",
-  "hover:border-outline-gray-modals hover:shadow-sm",
-  "focus:bg-surface-white focus:border-outline-gray-4 focus:shadow-sm focus:ring-0",
-  "focus-visible:ring-2 focus-visible:ring-outline-gray-3",
-  "text-ink-gray-8 transition-colors -mt-0.5",
-];
+const extensions = buildEditorExtensions({ extra: props.extensions });
 
-const emailClass = [
-  "!prose-sm max-w-full overflow-auto py-1.5 px-2",
-  "rounded-b border border-[--surface-gray-2] bg-surface-white",
-  "placeholder-ink-gray-4",
-  "text-ink-gray-8 transition-colors -mt-0.5",
+const contentClass = [
+  "!prose-sm max-w-full overflow-auto py-1.5 px-3",
+  "rounded-b-4 border border-outline-gray-1 bg-surface-base",
+  "placeholder-ink-gray-4 text-ink-gray-8 -mt-0.5",
 ];
 
 const editorClass = computed(() => [
-  ...(props.type === "Email" ? emailClass : savedReplyClass),
+  ...contentClass,
   props.minHeight,
   props.maxHeight,
 ]);
