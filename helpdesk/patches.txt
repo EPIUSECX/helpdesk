@@ -66,3 +66,4 @@ helpdesk.patches.show_ticket_field_permission_notice
 helpdesk.patches.sync_customer_manager_roles
 helpdesk.patches.add_customer_ticket_fields_and_webhook
 helpdesk.patches.backfill_priority_order #v2
+helpdesk.patches.repoint_comment_webhooks
