@@ -23,7 +23,7 @@
                   v-if="option.image"
                   :image="option.image"
                   :label="option.label"
-                  class="border-2 border-[var(--surface-white)] flex-shrink-0"
+                  class="border-2 border-[var(--surface-base)] flex-shrink-0"
                   size="sm"
                 />
               </div>
@@ -50,12 +50,12 @@
 
     <div
       v-if="isOpen"
-      class="absolute z-50 mt-2 w-64 divide-y divide-outline-gray-modals rounded-lg bg-surface-modal shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none start-0 origin-top-left"
+      class="absolute z-50 mt-2 w-64 divide-y divide-outline-elevation-2 rounded-6 bg-surface-elevation-2 shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none start-0 origin-top-left"
     >
       <!-- Header -->
       <div class="py-1.5 px-1.5">
         <div
-          class="flex h-7 items-center text-sm font-medium text-ink-gray-6 justify-between"
+          class="flex h-7 items-center text-sm-medium text-ink-gray-6 justify-between"
         >
           <input
             ref="inputRef"
@@ -85,13 +85,13 @@
           <button
             v-for="option in filteredIndividualOptions"
             :key="`individual-${option.value}`"
-            class="group flex h-7 w-full items-center rounded px-2 text-base hover:bg-surface-gray-3 text-ink-gray-6"
+            class="group flex h-7 w-full items-center rounded-4 px-2 text-base hover:bg-surface-gray-3 text-ink-gray-6"
             :class="{ 'bg-surface-gray-2': isHighlighted(option) }"
             @click="toggleOption(option)"
           >
             <Checkbox
               :modelValue="props.modelValue.includes(option.value)"
-              class="me-2 flex-shrink-0"
+              class="me-4 flex-shrink-0"
             />
 
             <component v-if="option.icon" :is="renderIcon(option.icon)" />
@@ -121,7 +121,7 @@
         <div v-for="group in filteredGroups" :key="`group-${group.group}`">
           <!-- Group Header -->
           <div
-            class="flex h-7 pt-1.5 sticky top-0 bg-surface-white items-center px-2 text-sm font-medium text-ink-gray-6"
+            class="flex h-7 pt-1.5 sticky top-0 bg-surface-base items-center px-2 text-sm-medium text-ink-gray-6"
           >
             {{ group.group }}
           </div>
@@ -130,13 +130,13 @@
           <button
             v-for="option in group.items"
             :key="`grouped-${option.value}`"
-            class="group flex h-7 w-full items-center rounded px-2 text-base hover:bg-surface-gray-3 text-ink-gray-6"
+            class="group flex h-7 w-full items-center rounded-4 px-2 text-base hover:bg-surface-gray-3 text-ink-gray-6"
             :class="{ 'bg-surface-gray-2': isHighlighted(option) }"
             @click="toggleOption(option)"
           >
             <Checkbox
               :modelValue="props.modelValue.includes(option.value)"
-              class="me-2 flex-shrink-0"
+              class="me-4 flex-shrink-0"
             />
 
             <component v-if="option.icon" :is="renderIcon(option.icon)" />

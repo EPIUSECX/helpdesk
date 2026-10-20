@@ -6,7 +6,7 @@
 
 @layer components {
   .prose-f {
-    @apply break-normal max-w-none prose prose-code:break-all prose-code:whitespace-pre-wrap prose-img:border prose-img:rounded-lg prose-sm;
+    @apply break-normal max-w-none prose prose-code:break-all prose-code:whitespace-pre-wrap prose-img:border prose-img:rounded-6 prose-sm;
   }
   .prose-f * {
     unicode-bidi: plaintext;
@@ -15,16 +15,23 @@
     background-color: var(--surface-gray-2);
     color: var(--ink-gray-9);
   }
+  /* Editor content carries both prose systems: prose-f underlines links via
+     text-decoration, prose-v3 via border-bottom. Keep only the prose-v3 line. */
+  .prose-f.prose-v3 a {
+    text-decoration: none;
+  }
 }
 
-.tiptap input[placeholder="Add caption"] {
+/* The caption field, hidden by its stable data attribute - the placeholder
+   text it used to be keyed on has changed twice. */
+.tiptap [data-media-text-field] {
   display: none !important;
 }
 
 html,
 body {
   color: var(--ink-gray-9);
-  background-color: var(--surface-white);
+  background-color: var(--surface-base);
 }
 
 :root {
@@ -125,6 +132,13 @@ body {
 }
 .replied-content .collapse:hover {
   background: #dadce0;
+}
+[data-theme="dark"] .replied-content .collapse {
+  color: #e2e2e2;
+  background: #424242;
+}
+[data-theme="dark"] .replied-content .collapse:hover {
+  background: #525252;
 }
 .replied-content .collapse + input {
   display: none;

@@ -1,10 +1,15 @@
 import { Extension, generateJSON } from "@tiptap/core";
-import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
-import { TextAlign } from "@tiptap/extension-text-align";
+import {
+  Table,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "@tiptap/extension-table";
+import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
-import { createSuggestionExtension } from "frappe-ui";
+import { SuggestionExtension } from "frappe-ui/editor";
 import FieldAutocompleteList from "./components/Settings/SavedReplies/components/FieldAutocompleteList.vue";
 import { userFields } from "./components/Settings/SavedReplies/savedReplies";
 import { getMeta } from "./stores/meta";
@@ -20,12 +25,11 @@ export const FieldAutocompleteSuggestionKey = new PluginKey<any>(
 
 const ticketMeta = getMeta("HD Ticket");
 
-export const FieldAutocomplete = createSuggestionExtension<FieldItem>({
+export const FieldAutocomplete = SuggestionExtension.configure<FieldItem>({
   name: "fieldAutocomplete",
-  char: "{{",
+  trigger: "{{",
   allowSpaces: true,
-  pluginKey: FieldAutocompleteSuggestionKey,
-  items: ({ editor, query, ...rest }) => {
+  items: (query: string) => {
     // Return empty list to force the dropdown to close.
     if (query.includes("}}")) {
       return [];
@@ -52,7 +56,7 @@ export const FieldAutocomplete = createSuggestionExtension<FieldItem>({
         field.value.toLowerCase().includes(cleanedQuery.toLowerCase())
     );
   },
-  command: ({ editor, range, props: item }) => {
+  command: ({ editor, range, item }) => {
     const { state } = editor;
     const textAfterCursor = state.doc.textBetween(
       range.to,
@@ -73,7 +77,7 @@ export const FieldAutocomplete = createSuggestionExtension<FieldItem>({
       .insertContent(`{{ ${item.value} }} `)
       .run();
   },
-  component: FieldAutocompleteList,
+  listComponent: FieldAutocompleteList,
 });
 
 export const ComponentUtils: Extension = Extension.create({
@@ -766,7 +770,6 @@ export const HandleExcelPaste = Extension.create({
   },
 });
 
-
 // Handle formatting cleanup
 type StyleValidator = (value: string) => boolean;
 type StyleNormalizer = (value: string) => string | null;
@@ -849,5 +852,40 @@ export const CleanStyles = Extension.create<CleanStylesOptions>({
           return true;
         },
     } as any;
+  },
+});
+
+// frappe-ui's suggestion popups (`/`, `@`, `{{`) don't close on an outside click.
+export const DismissSuggestionsOnOutsideClick = Extension.create({
+  name: "dismissSuggestionsOnOutsideClick",
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey("dismissSuggestionsOnOutsideClick"),
+        view(view) {
+          const onPointerDown = (event: PointerEvent) => {
+            const target = event.target as Element;
+            if (
+              view.dom.contains(target) ||
+              target.closest?.(".editor-popover, [data-suggestion-popup]")
+            )
+              return;
+            for (const plugin of view.state.plugins) {
+              const state = plugin.getState(view.state);
+              if (state?.active && "decorationId" in state)
+                view.dispatch(
+                  view.state.tr.setMeta(plugin.spec.key!, { exit: true })
+                );
+            }
+          };
+          document.addEventListener("pointerdown", onPointerDown, true);
+          return {
+            destroy: () =>
+              document.removeEventListener("pointerdown", onPointerDown, true),
+          };
+        },
+      }),
+    ];
   },
 });

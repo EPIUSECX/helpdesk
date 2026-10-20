@@ -157,8 +157,12 @@ apiCall.submit({ ticket_id: "<id>", agent_id: "<agent>" });
 ### Icons
 
 - **Primary icon system**: Lucide icons via unplugin-icons for consistency and modern design
-- **Secondary**: FeatherIcon component from frappe-ui (legacy usage, prefer Lucide for new components)
-- Use Lucide icons for all new components:
+- **Secondary**: FeatherIcon component from frappe-ui (legacy usage only)
+- **Rule**: Never introduce `FeatherIcon` in new code. New components must use Lucide
+  icons (`<LucideInfo />`, `<LucidePlus />`, …) — no exceptions, including small
+  helper icons like tooltip/info glyphs.
+- Use Lucide icons for all new components. They are globally auto-registered
+  (see `desk/components.d.ts`), so no import is needed when used as a template tag:
   ```vue
   <template>
     <LucidePlus class="size-4" />
@@ -211,7 +215,9 @@ apiCall.submit({ ticket_id: "<id>", agent_id: "<agent>" });
 
 **Data Query Patterns**:
 
-- Always prefer `frappe.qb.get_query()` over `frappe.db.get_all()` for new code
+- Always prefer `frappe.get_list()` over `frappe.get_all()` for new code. It handles perms out of the box and is more flexible.
+- `frappe.get_all()` is fine for child tables (e.g. `Has Role`, `HD Customer Member`), which have no permissions of their own.
+- When `frappe.get_all()` is used on a parent DocType, make sure the caller may see the result some other way, for example a `frappe.has_permission(...)` check first, or `@agent_only` / `@agent_manager_only` (`helpdesk/utils.py`) on the endpoint.
 - Use `frappe.qb.get_query(..., ignore_permissions=False)` when permission checks are needed
 - Example query patterns from helpdesk context
 
@@ -261,6 +267,7 @@ class HDFoo(Document):
 - Methods that mutate a related document (e.g. an Assignment Rule) receive that doc as an argument and mutate it in memory. The **caller** is responsible for the final `doc.save()` — this keeps saves to a minimum (one save per hook).
 - Never fetch the same document twice in one hook. Fetch once, pass the doc through the call chain.
 - `@staticmethod` is allowed for pure transformations (e.g. building a condition string) that don't touch `self` or any Frappe doc.
+- If there is an issue in framework/ui or frappe-ui or frappe framework, dont do a workaround. Instead, raise a blocker in the spec and wait for a fix. Do not implement workarounds that will be removed later. If possible, raise a PR to fix the issue in the framework instead of implementing a workaround in helpdesk.
 
 **Save discipline:**
 
@@ -367,7 +374,7 @@ const ticket = createDocumentResource({
 - Use ESLint with Vue 3 recommended rules and Prettier for consistency
 - Write meaningful commit messages and maintain clean git history
 - Document complex logic with JSDoc/TSDoc comments
-- Only add comments that explain why something is done, not what is done
+- Keep a comment to 2 lines at most. If it needs more to explain, simplify the code instead
 - Keep dependencies updated and audit for security vulnerabilities
 
 ## References

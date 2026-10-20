@@ -56,16 +56,25 @@ website_route_rules = [
 
 user_invitation = {
     "allowed_roles": {
-        "Agent Manager": ["Agent", "Agent Manager"],
-        "System Manager": ["Agent", "Agent Manager", "System Manager"],
+        "Agent Manager": [
+            "Agent",
+            "Agent Manager",
+            "HD Customer",
+            "HD Customer Manager",
+        ],
+        "System Manager": [
+            "Agent",
+            "Agent Manager",
+            "System Manager",
+            "HD Customer",
+            "HD Customer Manager",
+        ],
     },
     "after_accept": "helpdesk.helpdesk.hooks.user_invitation.after_accept",
+    "extra_invite_params": ["customer", "contact"],
 }
 
 doc_events = {
-    "Contact": {
-        "before_insert": "helpdesk.overrides.contact.before_insert",
-    },
     "Assignment Rule": {
         "on_trash": "helpdesk.extends.assignment_rule.on_assignment_rule_trash",
         "validate": "helpdesk.extends.assignment_rule.on_assignment_rule_validate",
@@ -95,17 +104,40 @@ doc_events = {
     "Notification Log": {
         "before_insert": "helpdesk.extends.notification_log.before_insert",
     },
+    "Comment": {
+        "before_insert": "helpdesk.extends.comment.before_insert",
+        "after_insert": "helpdesk.extends.comment.after_insert",
+        "validate": "helpdesk.extends.comment.validate",
+        "on_trash": "helpdesk.extends.comment.on_trash",
+    },
 }
 
-has_permission = {
-    "HD Ticket": "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.has_permission",
-    "HD Saved Reply": "helpdesk.helpdesk.doctype.hd_saved_reply.hd_saved_reply.has_permission",
-}
-
+# For List View
 permission_query_conditions = {
     "HD Ticket": "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.permission_query",
     "HD Saved Reply": "helpdesk.helpdesk.doctype.hd_saved_reply.hd_saved_reply.permission_query",
+    "HD Customer": "helpdesk.helpdesk.doctype.hd_customer.hd_customer.permission_query",
 }
+
+
+has_permission = {
+    "HD Agent": "helpdesk.helpdesk.doctype.hd_agent.hd_agent.has_permission",
+    "HD Ticket": "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.has_permission",
+    "HD Saved Reply": "helpdesk.helpdesk.doctype.hd_saved_reply.hd_saved_reply.has_permission",
+    "HD Customer": "helpdesk.helpdesk.doctype.hd_customer.hd_customer.has_permission",
+    "Comment": "helpdesk.extends.comment.has_permission",
+}
+
+override_whitelisted_methods = {
+    "frappe.realtime.has_permission": "helpdesk.overrides.realtime.has_permission",
+}
+
+
+notification_skip_email_types = [
+    "Reaction",
+    "Ticket Reopened",
+]
+
 
 # DocType Class
 # ---------------
@@ -113,6 +145,7 @@ permission_query_conditions = {
 override_doctype_class = {
     "Email Account": "helpdesk.overrides.email_account.CustomEmailAccount",
     "Assignment Rule": "helpdesk.overrides.assignment_rule.HelpdeskAssignmentRule",
+    "User Invitation": "helpdesk.overrides.user_invitation.HelpdeskUserInvitation",
 }
 
 ignore_links_on_delete = [

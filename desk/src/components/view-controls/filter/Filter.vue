@@ -1,17 +1,25 @@
 <template>
-  <Popover placement="bottom-end">
-    <template #target="{ togglePopover, open }">
-      <div :ref="() => (openPopoverFn = open)" class="w-fit">
+  <Popover ref="popover" bare side="bottom" align="end">
+    <template #trigger>
+      <div class="w-fit">
         <FilterTrigger
           :count="activeFilters.length"
-          @toggle="openPopover(togglePopover)"
-          @clear="clearFilters()"
+          @toggle="resetSteps()"
+          @clear="clearAllAndClose"
         />
       </div>
     </template>
-    <template #body>
+    <template #default>
+      <!-- Dedicated high-z layer the operator dropdown teleports into. Both this
+           and the frappe-ui Popover panel land in <body>; the popover panel is
+           z-[100], so a body-mounted menu (z-auto) renders behind it. This layer
+           establishes a z-[101] stacking context above the panel, and owning it
+           here keeps the fix scoped to the filter. -->
+      <Teleport to="body">
+        <div ref="operatorMenuLayer" class="relative z-[101]" />
+      </Teleport>
       <div
-        class="my-2 w-80 rounded-lg border border-outline-gray-1 bg-surface-white shadow-xl"
+        class="my-2 w-80 rounded-6 border border-outline-gray-1 bg-surface-base shadow-xl"
       >
         <div class="relative overflow-clip rounded-[inherit]">
           <Transition
@@ -26,7 +34,7 @@
                   class="flex items-center border-b border-outline-gray-1 p-2 ps-3 h-9 outline-none"
                   @vue:mounted="focusOverview"
                 >
-                  <span class="text-base font-medium text-ink-gray-8">
+                  <span class="text-base-medium text-ink-gray-8">
                     {{ headerLabel }}
                   </span>
                 </div>
@@ -35,7 +43,7 @@
                     <div
                       v-for="filter in activeFilters"
                       :key="filter.index"
-                      class="group flex h-8 w-full items-center gap-2 rounded px-1.5 hover:bg-surface-gray-2 pl-0"
+                      class="group flex h-8 w-full items-center gap-2 rounded-4 px-1.5 hover:bg-surface-gray-2 pl-0"
                     >
                       <Button
                         variant="ghost"
@@ -72,7 +80,7 @@
                     </div>
                   </div>
                   <div
-                    class="mt-1 flex items-center justify-between border-t border-outline-gray-1 px-1 py-1.5"
+                    class="flex items-center justify-between border-t border-outline-gray-1 px-1 py-1.5"
                   >
                     <Button
                       variant="ghost"
@@ -120,9 +128,11 @@
               <!-- Step: value — pick operator + value (renders its own header) -->
               <FilterValueEditor
                 v-else-if="step === 'value' && selectedField"
+                ref="valueEditor"
                 :key="editSession"
                 :field="selectedField"
                 :filter="editingFilter"
+                :operator-menu-target="operatorMenuLayer"
                 @apply="applyFilter"
                 @clear="clearCurrentFilter"
                 @back="goBack"
@@ -175,7 +185,11 @@ const editSession = ref(0);
 // list (when adding a new filter) or the overview (when editing an existing one).
 const valueEditorOrigin = ref<"overview" | "fields">("overview");
 const overviewHeader = ref<HTMLElement | null>(null);
-let openPopoverFn: (() => void) | null = null;
+// The high-z layer the operator dropdown teleports into (see #body), so its menu
+// sits above the filter popover panel instead of behind it.
+const operatorMenuLayer = ref<HTMLElement | null>(null);
+const popover = ref<InstanceType<typeof Popover> | null>(null);
+const valueEditor = ref<InstanceType<typeof FilterValueEditor> | null>(null);
 
 // Row actions stay out of the way until the row is hovered or focused.
 const revealOnRowActivity =
@@ -205,13 +219,8 @@ const editingFilter = computed<ActiveFilter | null>(() => {
 
 useShortcut("f", () => {
   resetSteps();
-  openPopoverFn?.();
+  popover.value?.open();
 });
-
-function openPopover(toggle: () => void) {
-  resetSteps();
-  toggle();
-}
 
 // The popover auto-focuses its first focusable element on open, which would put
 // a focus ring on the first filter row. Pull focus to the (non-tabbable) header
@@ -272,6 +281,12 @@ function applyFilter(operator: string, value: any) {
   replacingIndex.value = null;
 }
 
+function clearAllAndClose() {
+  valueEditor.value?.discardPendingText();
+  clearFilters();
+  popover.value?.close();
+}
+
 function clearCurrentFilter() {
   if (editingIndex.value === null) return;
   removeFilter(editingIndex.value);
@@ -317,7 +332,7 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
 .slide-forward-leave-active,
 .slide-back-enter-active,
 .slide-back-leave-active {
-  background-color: var(--surface-white);
+  background-color: var(--surface-base);
   transition: transform 250ms cubic-bezier(0.2, 0, 0, 1),
     opacity 250ms cubic-bezier(0.2, 0, 0, 1);
 }

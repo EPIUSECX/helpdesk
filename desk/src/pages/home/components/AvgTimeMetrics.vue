@@ -1,14 +1,14 @@
 <template>
-  <div class="flex flex-col rounded-md p-4 grow w-full h-full overflow-hidden">
+  <div class="flex flex-col rounded-5 p-4 grow w-full h-full overflow-hidden">
     <div class="flex items-center justify-between">
-      <div class="text-lg font-semibold text-ink-gray-8">
-        {{ __("Average Time Metrics") }}
+      <div class="text-md-semibold text-ink-gray-8">
+        {{ __("Avg. Time Metrics") }}
       </div>
       <div class="flex items-center gap-2">
         <Dropdown
           v-if="currentDuration !== 'custom_range'"
           :options="durationOptions"
-          placement="right"
+          align="end"
         >
           <template #default>
             <Button
@@ -23,9 +23,8 @@
           </template>
 
           <template #item-suffix="{ item }">
-            <FeatherIcon
+            <LucideCheck
               v-if="item.label == durationLabels[currentDuration]"
-              name="check"
               class="size-4"
             />
           </template>
@@ -36,8 +35,8 @@
           :model-value="customDateRange ? customDateRange.split(',') : []"
           :placeholder="__('Select range')"
           @update:model-value="onCustomRangeSelected"
+          @update:open="onPickerToggle"
           :format="'MMM D'"
-          @click="datePickerRef?.open()"
           side="bottom"
           align="end"
           class="!w-48"
@@ -53,18 +52,18 @@
       <div class="flex items-center gap-12">
         <div>
           <div
-            class="text-lg font-medium text-ink-gray-8 w-20 rounded-sm h-4 bg-surface-gray-1"
+            class="text-md-medium text-ink-gray-8 w-20 rounded-1 h-4 bg-surface-gray-1"
           />
           <div
-            class="w-40 rounded-sm h-4 bg-surface-gray-1 text-base flex items-center gap-2 mt-1"
+            class="w-40 rounded-1 h-4 bg-surface-gray-1 text-base flex items-center gap-2 mt-1"
           />
         </div>
         <div>
           <div
-            class="text-lg font-medium text-ink-gray-8 w-20 rounded-sm h-4 bg-surface-gray-1"
+            class="text-md-medium text-ink-gray-8 w-20 rounded-1 h-4 bg-surface-gray-1"
           />
           <div
-            class="w-40 rounded-sm h-4 bg-surface-gray-1 text-base flex items-center gap-2 mt-1"
+            class="w-40 rounded-1 h-4 bg-surface-gray-1 text-base flex items-center gap-2 mt-1"
           />
         </div>
       </div>
@@ -74,7 +73,7 @@
             <div
               v-for="idx in 5"
               :key="idx"
-              class="border-t border-dashed border-surface-gray-2 w-full"
+              class="border-t border-dashed border-outline-gray-2 w-full"
             />
           </div>
           <div
@@ -83,18 +82,18 @@
             class="relative z-10 flex gap-2 h-full items-end pb-0"
           >
             <div
-              class="w-[12px] bg-surface-gray-2 rounded-t-sm"
+              class="w-[12px] bg-surface-gray-2 rounded-t-1"
               :style="{ height: [20, 20, 30, 15, 10, 10][idx - 1] + '%' }"
             />
             <div
-              class="w-[12px] bg-surface-gray-2 rounded-t-sm"
+              class="w-[12px] bg-surface-gray-2 rounded-t-1"
               :style="{ height: [60, 55, 85, 45, 30, 20][idx - 1] + '%' }"
             />
           </div>
         </div>
         <div class="flex justify-around mt-3 mb-2 px-6">
           <div
-            class="w-6 h-2 bg-surface-gray-2 rounded"
+            class="w-6 h-2 bg-surface-gray-2 rounded-4"
             v-for="i in 6"
             :key="i"
           />
@@ -113,16 +112,16 @@
     <div v-else class="flex flex-col mt-5 grow w-full">
       <div class="flex items-center gap-12">
         <div>
-          <div class="text-lg font-medium text-ink-gray-8">
+          <div class="text-md-medium text-ink-gray-8">
             {{ timeAverages.first_response }}
           </div>
           <div class="text-base text-ink-gray-5 flex items-center gap-2 mt-1">
-            <div class="size-2 bg-surface-gray-7 rounded-full" />
+            <div class="size-2 bg-surface-gray-10 rounded-full" />
             {{ __("Avg. first response time") }}
           </div>
         </div>
         <div>
-          <div class="text-lg font-medium text-ink-gray-8">
+          <div class="text-md-medium text-ink-gray-8">
             {{ timeAverages.resolution }}
           </div>
           <div class="text-base text-ink-gray-5 flex items-center gap-2 mt-1">
@@ -139,16 +138,11 @@
 </template>
 
 <script setup lang="ts">
+import LucideCheck from "~icons/lucide/check";
 import { computed, onMounted, ref, type PropType, nextTick } from "vue";
 import { EChartsOption } from "echarts";
-import {
-  createResource,
-  Dropdown,
-  DateRangePicker,
-  Button,
-  FeatherIcon,
-  ECharts,
-} from "frappe-ui";
+import { createResource, Dropdown, DateRangePicker, Button } from "frappe-ui";
+import { ECharts } from "frappe-ui/experimental";
 import { dataTheme, formatTime } from "@/utils";
 import { __ } from "@/translation";
 import EmptyState from "@/components/EmptyState.vue";
@@ -206,6 +200,12 @@ const durationOptions = computed(() => [
     },
   },
 ]);
+
+// dismissing the calendar without a range would otherwise leave an empty
+// field where the preset menu used to be, with no way back to it
+const onPickerToggle = (open: boolean) => {
+  if (!open && !customDateRange.value) currentDuration.value = "6m";
+};
 
 const onCustomRangeSelected = (range: string[]) => {
   if (!range?.length) {
@@ -273,7 +273,7 @@ const chartConfig = computed<EChartsOption>(() => {
     legend: {},
     tooltip: {
       trigger: "item",
-      backgroundColor: cssVar("--surface-white"),
+      backgroundColor: cssVar("--surface-base"),
       borderColor: cssVar("--outline-gray-2"),
       borderWidth: 1,
       padding: 10,
@@ -338,7 +338,7 @@ const chartConfig = computed<EChartsOption>(() => {
     series: [
       {
         type: "bar",
-        color: cssVar("--surface-gray-7"),
+        color: cssVar("--surface-gray-10"),
         barWidth: "12%",
         itemStyle: { borderRadius: [4, 4, 0, 0] },
       },

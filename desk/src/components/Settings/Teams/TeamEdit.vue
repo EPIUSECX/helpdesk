@@ -7,11 +7,15 @@
       <div class="flex items-center gap-4">
         <div class="flex items-center justify-between gap-2 cursor-pointer">
           <Switch v-model="teamEnabled" v-if="!team.loading" />
-          <span class="text-sm text-ink-gray-7 font-medium">
+          <span class="text-sm-medium text-ink-gray-7">
             {{ __("Enabled") }}
           </span>
         </div>
-        <Dropdown placement="right" :options="options">
+        <Dropdown
+          align="end"
+          :options="options"
+          @update:open="(open) => open && (isConfirmingTeamDelete = false)"
+        >
           <Button variant="ghost">
             <template #icon>
               <LucideMoreHorizontal class="h-4 w-4" />
@@ -65,13 +69,12 @@
                   <Dropdown
                     v-if="teamMembers.length > 1"
                     :options="memberDropdownOptions(member)"
-                    placement="right"
+                    align="end"
+                    @update:open="
+                      (open) => open && (isConfirmingDelete = false)
+                    "
                   >
-                    <Button
-                      icon="lucide-more-horizontal"
-                      variant="ghost"
-                      @click="isConfirmingDelete = false"
-                    />
+                    <Button icon="lucide-more-horizontal" variant="ghost" />
                   </Dropdown>
                 </template>
               </AgentCard>
@@ -90,7 +93,7 @@
           <UserIcon class="size-6 text-ink-gray-6" />
         </div>
         <div class="flex flex-col items-center gap-1">
-          <div class="text-base font-medium text-ink-gray-6">
+          <div class="text-base-medium text-ink-gray-6">
             {{ __("No members found") }}
           </div>
           <div class="text-p-sm text-ink-gray-5 max-w-60 text-center">

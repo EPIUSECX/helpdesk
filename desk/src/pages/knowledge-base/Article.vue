@@ -7,7 +7,7 @@
           <Badge
             v-if="!article.loading"
             variant="subtle"
-            :theme="article.data?.status === 'Draft' ? 'orange' : 'green'"
+            :theme="article.data?.status === 'Draft' ? 'amber' : 'green'"
             size="md"
             >{{ article.data?.status }}</Badge
           >
@@ -34,7 +34,7 @@
       <!-- article Info -->
       <div
         class="flex flex-col gap-3 p-4 w-full"
-        :class="editable && 'border rounded-lg overflow-hidden'"
+        :class="editable && 'border rounded-6 overflow-hidden'"
       >
         <!-- Top Element -->
         <div class="flex flex-col gap-3">
@@ -43,7 +43,7 @@
             <div class="w-full">
               <textarea
                 ref="titleRef"
-                class="w-full resize-none border-0 text-3xl bg-transparent font-bold placeholder-ink-gray-3 p-0 focus:ring-0 overflow-hidden"
+                class="w-full resize-none border-0 text-3xl-bold bg-transparent placeholder-ink-gray-3 p-0 focus:ring-0 overflow-hidden"
                 v-model="title"
                 :placeholder="__('Title')"
                 rows="1"
@@ -131,7 +131,9 @@
                 <Dropdown
                   :options="articleActions"
                   v-if="!editable && !isCustomerPortal"
-                  @click="isConfirmingDeleteArticle = false"
+                  @update:open="
+                    (open) => open && (isConfirmingDeleteArticle = false)
+                  "
                 >
                   <Button size="md" variant="ghost">
                     <template #icon>
@@ -160,24 +162,31 @@
         </div>
 
         <!-- Article Content -->
-        <TextEditor
+        <Editor
           ref="editorRef"
-          :editor-class="editorClass"
-          :content="textEditorContentWithIDs"
-          :extensions="[ComponentUtils, CleanStyles]"
+          :model-value="textEditorContentWithIDs"
+          :extensions="extensions"
           :editable="editable"
-          @change="(event:string) => {
-			      content = event;
-		      }"
+          :upload-function="
+            (file: any, options: any) =>
+              uploadFunction(file, 'HD Article', articleId, false, options)
+          "
+          @change="(event:string) => { content = event; }"
           :placeholder="__('Write your article here...')"
         >
-          <template #bottom v-if="editable">
-            <TextEditorFixedMenu
+          <template #default>
+            <!-- Scroll here so selected nodes aren't clipped. -->
+            <div :class="editorScrollClass">
+              <EditorContent class="rounded-b-6 max-w-[unset] prose-sm" />
+            </div>
+            <EditorFixedMenu
+              v-if="editable"
               class="-ms-1 overflow-x-auto w-full"
-              :buttons="textEditorMenuButtons"
+              :items="fullToolbar"
             />
+            <EditorTableMenu v-if="editable" />
           </template>
-        </TextEditor>
+        </Editor>
         <div
           v-if="!editable && !isCustomerPortal"
           class="flex gap-1 items-center pt-1.5 mt-4"
@@ -190,9 +199,7 @@
               size="lg"
             />
             <div class="flex flex-col justify-start gap-1">
-              <p
-                class="truncate capitalize text-p-base text-ink-gray-9 font-medium"
-              >
+              <p class="truncate capitalize text-p-base-medium text-ink-gray-9">
                 <span class="text-base text-ink-gray-5"
                   >{{ __("published by") }}
                 </span>
@@ -229,7 +236,7 @@
       v-if="article.loading"
       class="w-full h-screen flex items-center justify-center"
     >
-      <LoadingIndicator :scale="10" />
+      <LoadingIndicator class="size-10" />
     </div>
     <MoveToCategoryModal
       v-model="moveToModal"
@@ -248,58 +255,60 @@
 <script setup lang="ts">
 import DiscardButton from "@/components/DiscardButton.vue";
 import LayoutHeader from "@/components/LayoutHeader.vue";
+import { buildEditorExtensions, fullToolbar } from "@/components/editor/config";
+import {
+  ThumbsDownFilledIcon,
+  ThumbsDownIcon,
+  ThumbsUpFilledIcon,
+  ThumbsUpIcon,
+} from "@/components/icons";
 import ArticleFeedback from "@/components/knowledge-base/ArticleFeedback.vue";
 import CategoryModal from "@/components/knowledge-base/CategoryModal.vue";
 import MoveToCategoryModal from "@/components/knowledge-base/MoveToCategoryModal.vue";
+import { useScreenSize } from "@/composables/screen";
 import { useAuthStore } from "@/stores/auth";
-import { globalStore } from "@/stores/globalStore";
 import {
   deleteRes as deleteArticle,
   incrementView,
   moveToCategory,
+  newCategory,
   updateRes as updateArticle,
-  likeArticle,
 } from "@/stores/knowledgeBase";
 import { capture } from "@/telemetry";
-import { CleanStyles, ComponentUtils } from "@/tiptap-extensions";
+import { __ } from "@/translation";
 import { Article, Breadcrumb, Error, FeedbackAction, Resource } from "@/types";
 import {
+  ConfirmDelete,
   copyToClipboard,
   isCustomerPortal,
-  textEditorMenuButtons,
-  ConfirmDelete,
+  uploadFunction,
 } from "@/utils";
-import { newCategory } from "@/stores/knowledgeBase";
 import {
   Avatar,
+  Badge,
   Breadcrumbs,
   Button,
   createResource,
-  createListResource,
+  dayjsLocal,
   debounce,
   Dropdown,
-  TextEditor,
-  TextEditorFixedMenu,
-  toast,
-  Badge,
-  dayjs,
-  dayjsLocal,
   LoadingIndicator,
+  toast,
   usePageMeta,
 } from "frappe-ui";
-import { computed, h, onMounted, ref, watch, nextTick, reactive } from "vue";
-import { useScreenSize } from "@/composables/screen";
-const { isMobileView } = useScreenSize();
+import {
+  Editor,
+  EditorContent,
+  EditorFixedMenu,
+  EditorTableMenu,
+} from "frappe-ui/editor";
+import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import IconDot from "~icons/lucide/dot";
 import IconMoreHorizontal from "~icons/lucide/more-horizontal";
-import { __ } from "@/translation";
-import {
-  ThumbsDownIcon,
-  ThumbsUpIcon,
-  ThumbsDownFilledIcon,
-  ThumbsUpFilledIcon,
-} from "@/components/icons";
+
+const extensions = buildEditorExtensions();
+const { isMobileView } = useScreenSize();
 
 const props = defineProps({
   articleId: {
@@ -599,25 +608,26 @@ function scrollToHeading() {
   }, 500);
 }
 
-watch(articleStats.data, () => {
-  if (articleStats.data) {
-    likes.value = articleStats.data.likes;
-    dislikes.value = articleStats.data.dislikes;
+watch(
+  () => articleStats.data,
+  (stats) => {
+    if (stats) {
+      likes.value = stats.likes;
+      dislikes.value = stats.dislikes;
+    }
   }
-});
+);
 
 watch([() => content.value, () => title.value], ([newContent, newTitle]) => {
   isDirty.value =
     newContent !== article.data.content || newTitle !== article.data.title;
 });
 
-const editorClass = computed(() => {
-  return [
-    "rounded-b-lg max-w-[unset] prose-sm",
+const editorScrollClass = computed(
+  () =>
     editable.value &&
-      "overflow-auto h-[calc(100vh-340px)] sm:h-[calc(100vh-250px)]",
-  ];
-});
+    "-mx-4 px-4 overflow-auto h-[calc(100vh-340px)] sm:h-[calc(100vh-250px)]"
+);
 
 const isConfirmingDeleteArticle = ref(false);
 
@@ -657,7 +667,7 @@ const articleActions = computed(() => [
   {
     group: __("Danger"),
     hideLabel: true,
-    items: [
+    options: [
       ...ConfirmDelete({
         onConfirmDelete: handleDelete,
         isConfirmingDelete: isConfirmingDeleteArticle,

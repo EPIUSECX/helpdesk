@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-md border px-2 border-outline-gray-2 text-sm">
+  <div class="rounded-5 border px-2 border-outline-gray-2 text-sm">
     <div
       class="grid p-2 px-4 items-center"
       :style="{
@@ -16,7 +16,7 @@
         }"
       >
         {{ column.label }}
-        <span v-if="column.isRequired" class="text-ink-red-3">*</span>
+        <span v-if="column.isRequired" class="text-ink-red-6">*</span>
       </div>
     </div>
     <hr v-if="slaData.support_and_resolution?.length !== 0" />
